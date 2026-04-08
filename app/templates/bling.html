@@ -252,7 +252,7 @@
         document.getElementById('dateFrom').value = weekAgo.toISOString().split('T')[0];
 
         function showError(msg) {
-            document.getElementById('errorContainer').innerHTML = `<div class="error-msg">${msg}</div>`;
+            const errDiv = document.createElement('div'); errDiv.className = 'error-msg'; errDiv.textContent = msg; const ec = document.getElementById('errorContainer'); ec.innerHTML = ''; ec.appendChild(errDiv);
         }
 
         async function fetchAPI(endpoint) {

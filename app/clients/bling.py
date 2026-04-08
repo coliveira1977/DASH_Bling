@@ -2,8 +2,9 @@ import httpx
 import asyncio
 import json
 import os
+import stat
 import secrets
-from base64 import b64encode
+from base64 import b64encode, b64decode
 from pathlib import Path
 from app.config import get_settings
 from app.models.schemas import Product, Order
@@ -28,16 +29,22 @@ class BlingClient:
     def _load_saved_tokens(self):
         """Load tokens from file if they exist (overrides .env)."""
         if TOKEN_FILE.exists():
-            data = json.loads(TOKEN_FILE.read_text())
-            self.access_token = data.get("access_token", self.access_token)
-            self.refresh_token = data.get("refresh_token", self.refresh_token)
+            try:
+                raw = TOKEN_FILE.read_text()
+                data = json.loads(b64decode(raw).decode())
+                self.access_token = data.get("access_token", self.access_token)
+                self.refresh_token = data.get("refresh_token", self.refresh_token)
+            except Exception:
+                pass
 
     def _save_tokens(self):
-        """Persist tokens to file so they survive restarts."""
-        TOKEN_FILE.write_text(json.dumps({
+        """Persist tokens to file with obfuscation and restricted permissions."""
+        payload = b64encode(json.dumps({
             "access_token": self.access_token,
             "refresh_token": self.refresh_token,
-        }))
+        }).encode()).decode()
+        TOKEN_FILE.write_text(payload)
+        TOKEN_FILE.chmod(stat.S_IRUSR | stat.S_IWUSR)
 
     def _basic_auth(self) -> str:
         credentials = b64encode(

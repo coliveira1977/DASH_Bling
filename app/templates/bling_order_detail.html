@@ -292,8 +292,7 @@
 
                 render(o);
             } catch (err) {
-                document.getElementById('errorContainer').innerHTML =
-                    `<div class="error-msg">${err.message}</div>`;
+                const errDiv = document.createElement('div'); errDiv.className = 'error-msg'; errDiv.textContent = err.message; const ec = document.getElementById('errorContainer'); ec.innerHTML = ''; ec.appendChild(errDiv);
                 document.getElementById('content').innerHTML = '';
             }
         }

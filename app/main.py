@@ -1,26 +1,81 @@
 import asyncio
 import io
 import os
+import re
+import secrets
+import time
+from collections import defaultdict
 from datetime import datetime, timedelta
 
-from fastapi import FastAPI, Query, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi import FastAPI, Query, HTTPException, Depends
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, JSONResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_429_TOO_MANY_REQUESTS
 
 from app.clients.bling import BlingClient
 from app.clients.mercadolivre import MercadoLivreClient
+from app.config import get_settings
 from app.services.sync_products import compare_products
 from app.services.sync_orders import compare_orders
 from app.services.sync_stock import compare_stock
 
 BASE_PATH = os.environ.get("BASE_PATH", "")
 
-app = FastAPI(title="Bling x ML Sync Dashboard")
+app = FastAPI(title="Bling x ML Sync Dashboard", docs_url=None, redoc_url=None)
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, max_requests: int = 30, window: int = 60):
+        super().__init__(app)
+        self.max_requests = max_requests
+        self.window = window
+        self.requests: dict = defaultdict(list)
+
+    async def dispatch(self, request: Request, call_next):
+        ip = request.client.host if request.client else "unknown"
+        now = time.time()
+        self.requests[ip] = [t for t in self.requests[ip] if now - t < self.window]
+        if len(self.requests[ip]) >= self.max_requests:
+            return JSONResponse(
+                status_code=HTTP_429_TOO_MANY_REQUESTS,
+                content={"detail": "Muitas requisicoes. Tente novamente em breve."},
+            )
+        self.requests[ip].append(now)
+        return await call_next(request)
+
+
+app.add_middleware(RateLimitMiddleware, max_requests=30, window=60)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 templates.env.globals["BASE"] = BASE_PATH
+
+security = HTTPBasic()
+
+
+def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
+    settings = get_settings()
+    correct_user = secrets.compare_digest(credentials.username, settings.dash_username)
+    correct_pass = secrets.compare_digest(credentials.password, settings.dash_password)
+    if not (correct_user and correct_pass):
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED,
+            detail="Credenciais invalidas",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
+
+
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def validate_date(value: str) -> str:
+    if not DATE_RE.match(value):
+        raise HTTPException(status_code=400, detail="Formato de data invalido. Use YYYY-MM-DD.")
+    return value
 
 
 def default_dates():
@@ -32,24 +87,24 @@ def default_dates():
 # --- Pages ---
 
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
+async def dashboard(request: Request, _auth: str = Depends(verify_credentials)):
     return templates.TemplateResponse(request, "dashboard.html")
 
 
 @app.get("/bling", response_class=HTMLResponse)
-async def bling_page(request: Request):
+async def bling_page(request: Request, _auth: str = Depends(verify_credentials)):
     return templates.TemplateResponse(request, "bling.html")
 
 
 @app.get("/ml", response_class=HTMLResponse)
-async def ml_page(request: Request):
+async def ml_page(request: Request, _auth: str = Depends(verify_credentials)):
     return templates.TemplateResponse(request, "ml.html")
 
 
 # --- Bling OAuth2 ---
 
 @app.get("/bling/auth")
-async def bling_auth():
+async def bling_auth(_auth: str = Depends(verify_credentials)):
     bling = BlingClient()
     return RedirectResponse(bling.get_authorize_url())
 
@@ -73,7 +128,7 @@ async def bling_callback(
         await bling.exchange_code(code)
         return RedirectResponse(f"{BASE_PATH}/bling")
     except Exception as e:
-        return {"status": "error", "detail": f"Erro ao trocar code por token: {e}"}
+        return {"status": "error", "detail": "Erro ao trocar code por token."}
 
 
 # --- Bling Independent API ---
@@ -82,10 +137,11 @@ async def bling_callback(
 async def bling_summary(
     date_from: str = Query(None),
     date_to: str = Query(None),
+    _auth: str = Depends(verify_credentials),
 ):
     d_from, d_to = default_dates()
-    date_from = date_from or d_from
-    date_to = date_to or d_to
+    date_from = validate_date(date_from or d_from)
+    date_to = validate_date(date_to or d_to)
 
     bling = BlingClient()
     if not bling.access_token:
@@ -107,12 +163,12 @@ async def bling_summary(
 
 
 @app.get("/bling/pedidos", response_class=HTMLResponse)
-async def bling_orders_page(request: Request):
+async def bling_orders_page(request: Request, _auth: str = Depends(verify_credentials)):
     return templates.TemplateResponse(request, "bling_orders.html")
 
 
 @app.get("/bling/pedidos/{order_id}", response_class=HTMLResponse)
-async def bling_order_detail_page(request: Request, order_id: int):
+async def bling_order_detail_page(request: Request, order_id: int, _auth: str = Depends(verify_credentials)):
     return templates.TemplateResponse(request, "bling_order_detail.html", {"order_id": order_id})
 
 
@@ -120,10 +176,11 @@ async def bling_order_detail_page(request: Request, order_id: int):
 async def bling_orders_api(
     date_from: str = Query(None),
     date_to: str = Query(None),
+    _auth: str = Depends(verify_credentials),
 ):
     d_from, d_to = default_dates()
-    date_from = date_from or d_from
-    date_to = date_to or d_to
+    date_from = validate_date(date_from or d_from)
+    date_to = validate_date(date_to or d_to)
 
     bling = BlingClient()
     if not bling.access_token:
@@ -164,7 +221,7 @@ async def bling_orders_api(
 
 
 @app.get("/api/bling/canais-venda")
-async def bling_canais_venda():
+async def bling_canais_venda(_auth: str = Depends(verify_credentials)):
     bling = BlingClient()
     if not bling.access_token:
         raise HTTPException(status_code=401, detail="Bling nao autorizado.")
@@ -176,7 +233,7 @@ async def bling_canais_venda():
 
 
 @app.get("/api/bling/produtos/export")
-async def bling_export_products(canal: int = Query(None)):
+async def bling_export_products(canal: int = Query(None), _auth: str = Depends(verify_credentials)):
     """Export Bling products to Excel. Optionally filter by canal de venda."""
     import httpx
     from openpyxl import Workbook
@@ -328,20 +385,20 @@ async def bling_export_products(canal: int = Query(None)):
 
 
 @app.get("/api/bling/empresa")
-async def bling_empresa():
+async def bling_empresa(_auth: str = Depends(verify_credentials)):
     bling = BlingClient()
     if not bling.access_token:
         raise HTTPException(status_code=401, detail="Bling nao autorizado.")
     try:
         return await bling.get_empresa()
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Erro ao processar requisicao.")
     finally:
         await bling.close()
 
 
 @app.get("/api/bling/orders/{order_id}")
-async def bling_order_detail_api(order_id: int):
+async def bling_order_detail_api(order_id: int, _auth: str = Depends(verify_credentials)):
     bling = BlingClient()
     if not bling.access_token:
         raise HTTPException(status_code=401, detail="Bling nao autorizado.")
@@ -352,7 +409,7 @@ async def bling_order_detail_api(order_id: int):
 
 
 @app.get("/api/bling/orders/{order_id}/contas-receber")
-async def bling_contas_receber(order_id: int):
+async def bling_contas_receber(order_id: int, _auth: str = Depends(verify_credentials)):
     """Fetch accounts receivable linked to a sales order."""
     bling = BlingClient()
     if not bling.access_token:
@@ -360,13 +417,13 @@ async def bling_contas_receber(order_id: int):
     try:
         return await bling.get_contas_receber_by_origin(order_id)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Erro ao processar requisicao.")
     finally:
         await bling.close()
 
 
 @app.get("/api/bling/orders/{order_id}/nfe")
-async def bling_find_nfe(order_id: int):
+async def bling_find_nfe(order_id: int, _auth: str = Depends(verify_credentials)):
     """Find existing NFe for an order (by notaFiscal.id or contato+valor match)."""
     bling = BlingClient()
     if not bling.access_token:
@@ -393,20 +450,20 @@ async def bling_find_nfe(order_id: int):
 
 
 @app.post("/api/bling/orders/{order_id}/nfe")
-async def bling_generate_nfe(order_id: int):
+async def bling_generate_nfe(order_id: int, _auth: str = Depends(verify_credentials)):
     bling = BlingClient()
     if not bling.access_token:
         raise HTTPException(status_code=401, detail="Bling nao autorizado.")
     try:
         return await bling.generate_nfe(order_id)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Erro ao processar requisicao.")
     finally:
         await bling.close()
 
 
 @app.post("/api/bling/nfe/{nfe_id}/retry")
-async def bling_retry_nfe(nfe_id: int, order_id: int = Query(...)):
+async def bling_retry_nfe(nfe_id: int, order_id: int = Query(...), _auth: str = Depends(verify_credentials)):
     """Fix a pending NFe with correct data and re-send to SEFAZ."""
     bling = BlingClient()
     if not bling.access_token:
@@ -414,26 +471,26 @@ async def bling_retry_nfe(nfe_id: int, order_id: int = Query(...)):
     try:
         return await bling.retry_nfe(nfe_id, order_id)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Erro ao processar requisicao.")
     finally:
         await bling.close()
 
 
 @app.post("/api/bling/nfe/{nfe_id}/cancel")
-async def bling_cancel_nfe(nfe_id: int):
+async def bling_cancel_nfe(nfe_id: int, _auth: str = Depends(verify_credentials)):
     bling = BlingClient()
     if not bling.access_token:
         raise HTTPException(status_code=401, detail="Bling nao autorizado.")
     try:
         return await bling.cancel_nfe(nfe_id)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Erro ao processar requisicao.")
     finally:
         await bling.close()
 
 
 @app.get("/api/bling/nfe/{nfe_id}")
-async def bling_get_nfe(nfe_id: int):
+async def bling_get_nfe(nfe_id: int, _auth: str = Depends(verify_credentials)):
     bling = BlingClient()
     if not bling.access_token:
         raise HTTPException(status_code=401, detail="Bling nao autorizado.")
@@ -449,10 +506,11 @@ async def bling_get_nfe(nfe_id: int):
 async def ml_summary(
     date_from: str = Query(None),
     date_to: str = Query(None),
+    _auth: str = Depends(verify_credentials),
 ):
     d_from, d_to = default_dates()
-    date_from = date_from or d_from
-    date_to = date_to or d_to
+    date_from = validate_date(date_from or d_from)
+    date_to = validate_date(date_to or d_to)
 
     ml = MercadoLivreClient()
     if not ml.access_token or not ml.seller_id:
@@ -479,6 +537,7 @@ async def ml_summary(
 async def sync_products(
     date_from: str = Query(None),
     date_to: str = Query(None),
+    _auth: str = Depends(verify_credentials),
 ):
     bling = BlingClient()
     ml = MercadoLivreClient()
@@ -497,10 +556,11 @@ async def sync_products(
 async def sync_orders(
     date_from: str = Query(None),
     date_to: str = Query(None),
+    _auth: str = Depends(verify_credentials),
 ):
     d_from, d_to = default_dates()
-    date_from = date_from or d_from
-    date_to = date_to or d_to
+    date_from = validate_date(date_from or d_from)
+    date_to = validate_date(date_to or d_to)
 
     bling = BlingClient()
     ml = MercadoLivreClient()
@@ -519,6 +579,7 @@ async def sync_orders(
 async def sync_stock(
     date_from: str = Query(None),
     date_to: str = Query(None),
+    _auth: str = Depends(verify_credentials),
 ):
     bling = BlingClient()
     ml = MercadoLivreClient()
@@ -542,10 +603,11 @@ async def sync_stock(
 async def sync_summary(
     date_from: str = Query(None),
     date_to: str = Query(None),
+    _auth: str = Depends(verify_credentials),
 ):
     d_from, d_to = default_dates()
-    date_from = date_from or d_from
-    date_to = date_to or d_to
+    date_from = validate_date(date_from or d_from)
+    date_to = validate_date(date_to or d_to)
 
     bling = BlingClient()
     ml = MercadoLivreClient()
