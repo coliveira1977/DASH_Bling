@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"http://localhost:8000/api/bling/nfe/25454873996\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('NFe:', d.get\\('numero',''\\)\\); print\\('linkPDF:', d.get\\('linkPDF',''\\)[:80]\\)\")",
+      "Bash(curl -s \"http://localhost:8000/bling/pedidos/25470429677\")",
+      "Bash(curl -s -X POST \"http://localhost:8000/api/bling/orders/25470429677/nfe\" -H \"Content-Type: application/json\")",
+      "Bash(curl -s -X POST \"http://localhost:8000/api/bling/orders/25470429677/nfe\")",
+      "Bash(curl -s \"http://localhost:8000/api/bling/summary\")"
+    ]
+  }
+}
