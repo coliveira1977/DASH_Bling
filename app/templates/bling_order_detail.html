@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bling - Pedido</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a; color: #e2e8f0; min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid #334155; padding: 1.5rem 2rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-brand { display: flex; align-items: center; gap: 0.75rem; }
+        .header-logo { width: 36px; height: 36px; filter: hue-rotate(35deg) saturate(1.2); }
+        .header h1 {
+            font-size: 1.5rem; font-weight: 700;
+            background: linear-gradient(135deg, #8B8C4A, #B5C47E);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .header-actions { display: flex; gap: 1rem; align-items: center; }
+        nav { display: flex; gap: 0.5rem; }
+        nav a {
+            color: #94a3b8; text-decoration: none; padding: 0.4rem 0.75rem;
+            border-radius: 0.375rem; font-size: 0.85rem; border: 1px solid #334155; transition: all 0.2s;
+        }
+        nav a:hover { border-color: #B5C47E; color: #B5C47E; }
+        .container { padding: 1.5rem 2rem; max-width: 1200px; margin: 0 auto; }
+        .breadcrumb { font-size: 0.8rem; color: #64748b; margin-bottom: 1.5rem; }
+        .breadcrumb a { color: #B5C47E; text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .order-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;
+        }
+        .order-title { font-size: 1.3rem; font-weight: 700; color: #f1f5f9; }
+        .order-title span { color: #64748b; font-weight: 400; font-size: 0.9rem; margin-left: 0.5rem; }
+        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .badge-green { background: #14532d; color: #86efac; }
+        .badge-yellow { background: #713f12; color: #fde047; }
+        .badge-red { background: #7f1d1d; color: #fca5a5; }
+        .badge-blue { background: #2d3a1f; color: #C8D9A0; }
+        .badge-gray { background: #334155; color: #94a3b8; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        .section {
+            background: #1e293b; border: 1px solid #334155;
+            border-radius: 0.75rem; padding: 1.25rem;
+        }
+        .section-title {
+            font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;
+            letter-spacing: 0.05em; margin-bottom: 1rem; font-weight: 600;
+        }
+        .info-row { display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #0f172a; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { font-size: 0.8rem; color: #64748b; }
+        .info-value { font-size: 0.8rem; color: #e2e8f0; font-weight: 500; text-align: right; }
+        .section-full { grid-column: 1 / -1; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 0.6rem 0.75rem; font-size: 0.7rem;
+            color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #334155;
+        }
+        td { padding: 0.6rem 0.75rem; font-size: 0.8rem; border-bottom: 1px solid #0f172a; }
+        .total-row td { font-weight: 700; border-top: 2px solid #334155; color: #f1f5f9; }
+        .obs {
+            background: #0f172a; border-radius: 0.5rem; padding: 0.75rem;
+            font-size: 0.8rem; color: #94a3b8; line-height: 1.5; white-space: pre-wrap;
+        }
+        .loading { display: flex; align-items: center; justify-content: center; padding: 3rem; color: #64748b; }
+        .spinner {
+            width: 24px; height: 24px; border: 3px solid #334155; border-top-color: #8B8C4A;
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 0.75rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-msg {
+            background: #7f1d1d33; border: 1px solid #7f1d1d; color: #fca5a5;
+            padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.85rem;
+        }
+        .address-block { font-size: 0.8rem; line-height: 1.6; color: #cbd5e1; }
+        .timeline { position: relative; padding-left: 1.5rem; }
+        .timeline::before {
+            content: ''; position: absolute; left: 0.45rem; top: 0.5rem; bottom: 0.5rem;
+            width: 2px; background: #334155;
+        }
+        .tl-item { position: relative; padding-bottom: 1.25rem; }
+        .tl-item:last-child { padding-bottom: 0; }
+        .tl-dot {
+            position: absolute; left: -1.5rem; top: 0.15rem;
+            width: 12px; height: 12px; border-radius: 50%; border: 2px solid #334155;
+            background: #0f172a;
+        }
+        .tl-dot.done { background: #22c55e; border-color: #22c55e; }
+        .tl-dot.active { background: #8B8C4A; border-color: #8B8C4A; box-shadow: 0 0 6px #8B8C4A88; }
+        .tl-dot.warn { background: #eab308; border-color: #eab308; }
+        .tl-dot.error { background: #ef4444; border-color: #ef4444; }
+        .tl-dot.pending { background: #334155; border-color: #475569; }
+        .tl-title { font-size: 0.8rem; font-weight: 600; color: #e2e8f0; }
+        .tl-desc { font-size: 0.75rem; color: #94a3b8; margin-top: 0.15rem; line-height: 1.4; }
+        .tl-time { font-size: 0.7rem; color: #64748b; margin-top: 0.1rem; }
+        .nfe-detail-box {
+            background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem;
+            padding: 0.75rem; margin-top: 0.75rem; font-size: 0.75rem;
+        }
+        .nfe-detail-box .info-row { padding: 0.25rem 0; }
+        .nfe-detail-box .info-label { font-size: 0.75rem; }
+        .nfe-detail-box .info-value { font-size: 0.75rem; font-family: monospace; }
+        .action-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.5rem 1rem; border-radius: 0.5rem; border: none;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+            text-decoration: none;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-nfe { background: #16a34a; color: white; }
+        .btn-nfe:hover:not(:disabled) { background: #15803d; }
+        .btn-nfe-wait { background: #ca8a04; color: white; }
+        .btn-nfe-wait:hover:not(:disabled) { background: #a16207; }
+        .btn-nfe-wait .spinner-sm {
+            display: inline-block; width: 14px; height: 14px;
+            border: 2px solid rgba(255,255,255,0.3); border-top-color: white;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+        }
+        .btn-nfe-print { background: #6B7A3D; color: white; }
+        .btn-nfe-print:hover { background: #1d4ed8; }
+        .btn-nfe-error { background: #dc2626; color: white; }
+        .btn-nfe-error:hover:not(:disabled) { background: #b91c1c; }
+        .btn-etiqueta { background: #7c3aed; color: white; }
+        .btn-etiqueta:hover:not(:disabled) { background: #6d28d9; }
+        .btn-nfe-cancel { background: #991b1b; color: white; border: 1px solid #dc2626; }
+        .btn-nfe-cancel:hover:not(:disabled) { background: #7f1d1d; }
+        .btn-icon { font-size: 1rem; }
+        .toast {
+            position: fixed; bottom: 2rem; right: 2rem; padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem; font-size: 0.85rem; z-index: 9999;
+            animation: slideUp 0.3s ease;
+        }
+        .toast-success { background: #14532d; color: #86efac; border: 1px solid #22c55e; }
+        .toast-error { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+        .toast-info { background: #2d3a1f; color: #C8D9A0; border: 1px solid #8B8C4A; }
+        @keyframes slideUp {
+            from { transform: translateY(1rem); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .container { padding: 1rem; }
+        }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal {
+            background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem;
+            padding: 1.5rem; max-width: 560px; width: 90%; position: relative;
+        }
+        .modal-title {
+            font-size: 1rem; font-weight: 700; color: #e2e8f0; margin-bottom: 1rem;
+            padding-bottom: 0.75rem; border-bottom: 1px solid #334155;
+        }
+        .modal-close {
+            position: absolute; top: 1rem; right: 1rem; background: none; border: none;
+            color: #64748b; font-size: 1.2rem; cursor: pointer;
+        }
+        .modal-close:hover { color: #e2e8f0; }
+        .modal-field { margin-bottom: 0.75rem; }
+        .modal-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+        .modal-value {
+            background: #0f172a; border: 1px solid #334155; border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem; font-size: 0.8rem; color: #e2e8f0;
+            font-family: monospace; word-break: break-all; display: flex;
+            justify-content: space-between; align-items: center; gap: 0.5rem;
+        }
+        .modal-value span { flex: 1; }
+        .copy-btn {
+            background: #334155; border: none; color: #94a3b8; padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem; cursor: pointer; font-size: 0.7rem; white-space: nowrap;
+        }
+        .copy-btn:hover { background: #475569; color: #e2e8f0; }
+        .copy-btn.copied { background: #14532d; color: #86efac; }
+        .modal-actions { margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end; }
+        .modal-actions a, .modal-actions button {
+            padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.8rem;
+            font-weight: 600; text-decoration: none; cursor: pointer; border: none;
+        }
+        .btn-sefaz-go { background: #6B7A3D; color: white; }
+        .btn-sefaz-go:hover { background: #1d4ed8; }
+        .btn-modal-close { background: #334155; color: #94a3b8; }
+        .btn-modal-close:hover { background: #475569; color: #e2e8f0; }
+        @media print {
+            body { background: white; color: black; }
+            .header, .breadcrumb, .action-buttons, .toast { display: none !important; }
+            .section { border-color: #ccc; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-brand">
+            <img class="header-logo" src="{{ BASE }}/static/logo.png" alt="Logo">
+            <h1 id="pageTitle">Pedido</h1>
+        </div>
+        <div class="header-actions">
+            <nav>
+                <a href="{{ BASE }}/bling">Bling</a>
+                <a href="{{ BASE }}/ml">Mercado Livre</a>
+                <a href="{{ BASE }}/">Consolidado</a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="{{ BASE }}/bling">Bling</a> &rsaquo; <a href="{{ BASE }}/bling/pedidos">Pedidos</a> &rsaquo; <span id="breadcrumbOrder">Carregando...</span>
+        </div>
+
+        <div id="errorContainer"></div>
+        <div id="content">
+            <div class="loading"><div class="spinner"></div>Carregando pedido...</div>
+        </div>
+    </div>
+
+    <script>
+        const ORDER_ID = {{ order_id }};
+
+        function statusBadge(situacao) {
+            const valor = situacao?.valor ?? '';
+            const map = {
+                '0': ['Em aberto', 'blue'],
+                '1': ['Atendido', 'green'],
+                '2': ['Cancelado', 'red'],
+                '3': ['Em andamento', 'yellow'],
+                '4': ['Verificado', 'green'],
+                '6': ['Finalizado', 'green'],
+                '9': ['Em aberto', 'blue'],
+                '10': ['Atendido parcial', 'yellow'],
+                '11': ['Pendente', 'yellow'],
+                '12': ['Devolvido', 'red'],
+                '15': ['Em separacao', 'yellow'],
+            };
+            const [label, color] = map[String(valor)] || [String(valor), 'gray'];
+            return `<span class="badge badge-${color}">${label}</span>`;
+        }
+
+        function formatDate(d) {
+            if (!d || d === '0000-00-00') return '-';
+            const [y, m, day] = d.split('-');
+            return `${day}/${m}/${y}`;
+        }
+
+        function formatCurrency(v) {
+            return `R$ ${(v || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+
+        let currentOrder = null;
+        let currentNfe = null;
+        let contasReceber = [];
+        let empresaData = null;
+
+        async function loadOrder() {
+            try {
+                const resp = await fetch(`{{ BASE }}/api/bling/orders/${ORDER_ID}`);
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Erro ao carregar pedido');
+                }
+                const o = await resp.json();
+
+                // Find NFe for this order (by direct link or contato+valor match)
+                currentNfe = null;
+                try {
+                    const nfeResp = await fetch(`{{ BASE }}/api/bling/orders/${ORDER_ID}/nfe`);
+                    if (nfeResp.ok) {
+                        const nfeData = await nfeResp.json();
+                        if (nfeData && nfeData.id) currentNfe = nfeData;
+                    }
+                } catch (e) {}
+
+                // Fetch contas a receber and empresa in parallel
+                const [crResult, empResult] = await Promise.allSettled([
+                    fetch(`{{ BASE }}/api/bling/orders/${ORDER_ID}/contas-receber`).then(r => r.ok ? r.json() : []),
+                    !empresaData ? fetch('{{ BASE }}/api/bling/empresa').then(r => r.ok ? r.json() : null) : Promise.resolve(empresaData),
+                ]);
+                contasReceber = Array.isArray(crResult.value) ? crResult.value : [];
+                if (empResult.value) empresaData = empResult.value;
+
+                render(o);
+            } catch (err) {
+                document.getElementById('errorContainer').innerHTML =
+                    `<div class="error-msg">${err.message}</div>`;
+                document.getElementById('content').innerHTML = '';
+            }
+        }
+
+        // NFe situacao: 1=Pendente, 2=Rejeitada, 3=Denegada, 4=Cancelada, 5=Autorizada, 6=Inutilizada
+        let nfePolling = null;
+
+        function nfeButton() {
+            // Sem NFe -> Gerar
+            if (!currentNfe) {
+                if (nfePolling) { clearInterval(nfePolling); nfePolling = null; }
+                return `<button class="btn btn-nfe" id="btnNfe" onclick="generateNfe()">
+                            <span class="btn-icon">&#128196;</span> Gerar Nota Fiscal
+                        </button>`;
+            }
+
+            const sit = currentNfe.situacao;
+            const numero = currentNfe.numero || '';
+            const pdfUrl = currentNfe.linkPDF || currentNfe.linkDanfe || '';
+
+            // Pendente -> Aguardando SEFAZ + botao Corrigir e Reenviar
+            if (sit === 1) {
+                startPolling();
+                const nfeId = currentNfe.id;
+                return `<button class="btn btn-nfe-wait" disabled>
+                            <span class="spinner-sm"></span> Aguardando Resposta da SEFAZ
+                        </button>
+                        <button class="btn btn-nfe-error" id="btnRetry" onclick="retryNfe(${nfeId})">
+                            <span class="btn-icon">&#128260;</span> Corrigir e Reenviar
+                        </button>
+                        <span style="font-size:0.75rem;color:#facc15;">NFe #${numero} - Pendente</span>`;
+            }
+
+            // Autorizada -> Imprimir PDF
+            if (sit === 5 && pdfUrl) {
+                if (nfePolling) { clearInterval(nfePolling); nfePolling = null; }
+                return `<a class="btn btn-nfe-print" href="${pdfUrl}" target="_blank">
+                            <span class="btn-icon">&#128424;</span> Imprimir Nota Fiscal PDF
+                        </a>
+                        <span style="font-size:0.75rem;color:#4ade80;">NFe #${numero} - Autorizada pela SEFAZ</span>`;
+            }
+
+            // Rejeitada/Denegada -> Erro, permitir gerar novamente
+            if (sit === 2 || sit === 3) {
+                if (nfePolling) { clearInterval(nfePolling); nfePolling = null; }
+                return `<button class="btn btn-nfe-error" onclick="generateNfe()">
+                            <span class="btn-icon">&#9888;</span> NFe Rejeitada - Gerar Novamente
+                        </button>
+                        <span style="font-size:0.75rem;color:#f87171;">NFe #${numero} - ${sit === 2 ? 'Rejeitada' : 'Denegada'} pela SEFAZ</span>`;
+            }
+
+            // Cancelada/Inutilizada -> Permitir gerar nova
+            if (sit === 4 || sit === 6) {
+                if (nfePolling) { clearInterval(nfePolling); nfePolling = null; }
+                return `<button class="btn btn-nfe" id="btnNfe" onclick="generateNfe()">
+                            <span class="btn-icon">&#128196;</span> Gerar Nova Nota Fiscal
+                        </button>
+                        <span style="font-size:0.75rem;color:#f87171;">NFe #${numero} - ${sit === 4 ? 'Cancelada' : 'Inutilizada'}</span>`;
+            }
+
+            // Fallback
+            if (nfePolling) { clearInterval(nfePolling); nfePolling = null; }
+            return `<button class="btn btn-nfe-wait" disabled>
+                        <span class="btn-icon">&#9203;</span> NFe #${numero} em processamento
+                    </button>`;
+        }
+
+        function startPolling() {
+            if (nfePolling) return;
+            nfePolling = setInterval(async () => {
+                if (!currentNfe) { clearInterval(nfePolling); nfePolling = null; return; }
+                try {
+                    const resp = await fetch(`{{ BASE }}/api/bling/nfe/${currentNfe.id}`);
+                    if (!resp.ok) return;
+                    const nfe = await resp.json();
+                    if (nfe.situacao !== 1) {
+                        // Status changed - reload everything
+                        clearInterval(nfePolling);
+                        nfePolling = null;
+                        currentNfe = nfe;
+                        loadOrder();
+                    }
+                } catch (e) {}
+            }, 5000);
+        }
+
+        function render(o) {
+            currentOrder = o;
+            document.getElementById('pageTitle').textContent = `Pedido #${o.numero}`;
+            document.getElementById('breadcrumbOrder').textContent = `#${o.numero}`;
+            document.title = `Bling - Pedido #${o.numero}`;
+
+            const etiqueta = o.transporte?.etiqueta || {};
+            const endParts = [
+                etiqueta.endereco,
+                etiqueta.numero && etiqueta.numero !== '0' ? etiqueta.numero : null,
+                etiqueta.complemento,
+            ].filter(Boolean).join(', ');
+            const endFull = [
+                endParts,
+                etiqueta.bairro,
+                [etiqueta.municipio, etiqueta.uf].filter(Boolean).join(' - '),
+                etiqueta.cep ? `CEP: ${etiqueta.cep}` : null,
+            ].filter(Boolean).join('<br>');
+
+            const itens = o.itens || [];
+            const parcelas = o.parcelas || [];
+            const hasEtiqueta = etiqueta.nome || etiqueta.endereco;
+
+            document.getElementById('content').innerHTML = `
+                <div class="order-header">
+                    <div>
+                        <div class="order-title">
+                            Pedido #${o.numero}
+                            <span>ID: ${o.id}</span>
+                            ${o.numeroLoja ? `<span>Loja: ${o.numeroLoja}</span>` : ''}
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.75rem;">
+                        ${statusBadge(o.situacao)}
+                    </div>
+                </div>
+
+                <div class="action-buttons" style="margin-bottom:1.5rem;justify-content:space-between;">
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                        ${nfeButton()}
+                        <button class="btn btn-etiqueta" onclick="printEtiqueta()" ${!hasEtiqueta ? 'disabled title="Sem dados de entrega"' : ''}>
+                            <span class="btn-icon">&#127991;</span> Imprimir Etiqueta
+                        </button>
+                    </div>
+                    ${currentNfe && currentNfe.situacao === 5 ? `
+                    <button class="btn btn-nfe-cancel" onclick="cancelNfe(${currentNfe.id})">
+                        <span class="btn-icon">&#10060;</span> Cancelar Nota Fiscal
+                    </button>` : ''}
+                </div>
+
+                <div class="grid">
+                    <!-- Info Geral -->
+                    <div class="section">
+                        <div class="section-title">Informacoes Gerais</div>
+                        <div class="info-row">
+                            <span class="info-label">Data do Pedido</span>
+                            <span class="info-value">${formatDate(o.data)}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Data de Saida</span>
+                            <span class="info-value">${formatDate(o.dataSaida)}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Previsao de Entrega</span>
+                            <span class="info-value">${formatDate(o.dataPrevista)}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Produtos</span>
+                            <span class="info-value">${formatCurrency(o.totalProdutos)}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Frete</span>
+                            <span class="info-value">${formatCurrency(o.transporte?.frete)}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Desconto</span>
+                            <span class="info-value">${formatCurrency(o.desconto?.valor)} ${o.desconto?.unidade === 'PERCENTUAL' ? '%' : ''}</span>
+                        </div>
+                        <div class="info-row" style="border-top:1px solid #334155;padding-top:0.6rem;">
+                            <span class="info-label" style="font-weight:700;color:#e2e8f0;">Total do Pedido</span>
+                            <span class="info-value" style="font-size:1rem;color:#4ade80;">${formatCurrency(o.total)}</span>
+                        </div>
+                    </div>
+
+                    <!-- Cliente -->
+                    <div class="section">
+                        <div class="section-title">Cliente</div>
+                        <div class="info-row">
+                            <span class="info-label">Nome</span>
+                            <span class="info-value">${o.contato?.nome || '-'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Tipo</span>
+                            <span class="info-value">${o.contato?.tipoPessoa === 'F' ? 'Pessoa Fisica' : o.contato?.tipoPessoa === 'J' ? 'Pessoa Juridica' : '-'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">CPF/CNPJ</span>
+                            <span class="info-value">${o.contato?.numeroDocumento || '-'}</span>
+                        </div>
+                        ${endFull ? `
+                        <div style="margin-top:1rem;">
+                            <span class="info-label" style="display:block;margin-bottom:0.5rem;">Endereco de Entrega</span>
+                            <div class="address-block">${endFull}</div>
+                        </div>` : ''}
+                    </div>
+
+                    <!-- Itens -->
+                    <div class="section section-full">
+                        <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                            Itens do Pedido (${itens.length})
+                            <button class="btn" style="background:#334155;color:#e2e8f0;font-size:0.7rem;padding:0.3rem 0.6rem;" onclick="printItens()">
+                                <span class="btn-icon">&#128438;</span> Imprimir PDF
+                            </button>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Codigo</th>
+                                    <th>Descricao</th>
+                                    <th style="text-align:center">Qtd</th>
+                                    <th style="text-align:right">Valor Unit.</th>
+                                    <th style="text-align:right">Desconto</th>
+                                    <th style="text-align:right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itens.map(i => `
+                                    <tr>
+                                        <td><strong>${i.codigo || '-'}</strong></td>
+                                        <td>${i.descricao || '-'}</td>
+                                        <td style="text-align:center">${i.quantidade}</td>
+                                        <td style="text-align:right">${formatCurrency(i.valor)}</td>
+                                        <td style="text-align:right">${formatCurrency(i.desconto)}</td>
+                                        <td style="text-align:right">${formatCurrency(i.valor * i.quantidade - (i.desconto || 0))}</td>
+                                    </tr>
+                                `).join('')}
+                                <tr class="total-row">
+                                    <td colspan="5" style="text-align:right">Total</td>
+                                    <td style="text-align:right">${formatCurrency(o.totalProdutos)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagamento -->
+                    ${parcelas.length > 0 ? `
+                    <div class="section">
+                        <div class="section-title">Pagamento (${parcelas.length} parcela${parcelas.length > 1 ? 's' : ''})</div>
+                        ${parcelas.map((p, i) => {
+                            const conta = contasReceber.find(c => Math.abs((c.valor || 0) - (p.valor || 0)) < 0.01) || contasReceber[i];
+                            const sit = conta?.situacao;
+                            // 1=Em aberto, 2=Recebido, 3=Parcialmente recebido, 4=Devolvido, 5=Cancelado
+                            let sitLabel = '';
+                            let sitColor = '';
+                            if (sit === 1) { sitLabel = 'Em aberto'; sitColor = '#facc15'; }
+                            else if (sit === 2) { sitLabel = 'Recebido'; sitColor = '#4ade80'; }
+                            else if (sit === 3) { sitLabel = 'Parcial'; sitColor = '#fb923c'; }
+                            else if (sit === 4) { sitLabel = 'Devolvido'; sitColor = '#f87171'; }
+                            else if (sit === 5) { sitLabel = 'Cancelado'; sitColor = '#f87171'; }
+                            const contaDesc = conta?.contaContabil?.descricao || '';
+                            const venc = conta?.vencimento || p.dataVencimento;
+                            return `
+                            <div class="info-row" style="flex-wrap:wrap;gap:0.25rem;">
+                                <span class="info-label">${parcelas.length > 1 ? `Parcela ${i + 1}` : 'Valor'} - Venc. ${formatDate(venc)}</span>
+                                <span class="info-value" style="display:flex;align-items:center;gap:0.5rem;">
+                                    ${formatCurrency(p.valor)}
+                                    ${sitLabel ? `<span style="font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:9999px;background:${sitColor}22;color:${sitColor};font-weight:600;">${sitLabel}</span>` : `<span style="font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:9999px;background:#64748b22;color:#64748b;font-weight:600;">Sem registro financeiro</span>`}
+                                </span>
+                            </div>
+                            ${contaDesc ? `
+                            <div style="padding:0.1rem 0 0.4rem 0;font-size:0.7rem;color:#64748b;">
+                                <span>Conta: ${contaDesc}</span>
+                            </div>` : ''}`;
+                        }).join('')}
+                    </div>` : ''}
+
+                    <!-- Transporte -->
+                    <div class="section">
+                        <div class="section-title">Transporte</div>
+                        <div class="info-row">
+                            <span class="info-label">Frete</span>
+                            <span class="info-value">${formatCurrency(o.transporte?.frete)}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Volumes</span>
+                            <span class="info-value">${o.transporte?.quantidadeVolumes || 0}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Peso Bruto</span>
+                            <span class="info-value">${o.transporte?.pesoBruto || 0} kg</span>
+                        </div>
+                        ${o.transporte?.contato?.nome ? `
+                        <div class="info-row">
+                            <span class="info-label">Transportadora</span>
+                            <span class="info-value">${o.transporte.contato.nome}</span>
+                        </div>` : ''}
+                    </div>
+
+                    <!-- Observacoes -->
+                    ${o.observacoes ? `
+                    <div class="section section-full">
+                        <div class="section-title">Observacoes</div>
+                        <div class="obs">${o.observacoes}</div>
+                    </div>` : ''}
+
+                    ${o.observacoesInternas ? `
+                    <div class="section section-full">
+                        <div class="section-title">Observacoes Internas</div>
+                        <div class="obs">${o.observacoesInternas}</div>
+                    </div>` : ''}
+
+                    <!-- Intermediador -->
+                    ${o.intermediador?.cnpj ? `
+                    <div class="section">
+                        <div class="section-title">Intermediador / Marketplace</div>
+                        <div class="info-row">
+                            <span class="info-label">CNPJ</span>
+                            <span class="info-value">${o.intermediador.cnpj}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Usuario</span>
+                            <span class="info-value">${o.intermediador.nomeUsuario || '-'}</span>
+                        </div>
+                    </div>` : ''}
+
+                    <!-- Nota Fiscal Timeline -->
+                    <div class="section section-full" id="nfeTimeline">
+                        <div class="section-title">Nota Fiscal - Historico de Autorizacao</div>
+                        <div id="nfeTimelineContent">
+                            ${currentNfe ? renderNfeTimeline() : '<div style="color:#64748b;font-size:0.8rem;">Nenhuma nota fiscal emitida para este pedido.</div>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderNfeTimeline() {
+            const nfe = currentNfe;
+            if (!nfe) return '';
+
+            const sit = nfe.situacao;
+            // situacao: 1=Pendente, 2=Rejeitada, 3=Denegada, 4=Cancelada, 5=Autorizada, 6=Inutilizada
+            const sitLabels = {
+                1: 'Pendente', 2: 'Rejeitada', 3: 'Denegada',
+                4: 'Cancelada', 5: 'Autorizada', 6: 'Inutilizada'
+            };
+            const emissao = nfe.dataEmissao || '';
+            const operacao = nfe.dataOperacao || '';
+            const chave = nfe.chaveAcesso || '';
+            const serie = nfe.serie || '';
+            const numero = nfe.numero || '';
+            const valor = nfe.valorNota || 0;
+            const xmlUrl = nfe.xml || '';
+            const isAuthorized = sit === 5;
+            const isRejected = sit === 2 || sit === 3;
+            const isCancelled = sit === 4 || sit === 6;
+            const isPending = sit === 1;
+
+            // Extract UF code from chaveAcesso (first 2 digits)
+            const ufCode = chave ? chave.substring(0, 2) : '';
+            const ufMap = {
+                '11':'RO','12':'AC','13':'AM','14':'RR','15':'PA','16':'AP','17':'TO',
+                '21':'MA','22':'PI','23':'CE','24':'RN','25':'PB','26':'PE','27':'AL',
+                '28':'SE','29':'BA','31':'MG','32':'ES','33':'RJ','35':'SP','41':'PR',
+                '42':'SC','43':'RS','50':'MS','51':'MT','52':'GO','53':'DF'
+            };
+            const uf = ufMap[ufCode] || '';
+            const sefaz = uf ? 'SEFAZ-' + uf : 'SEFAZ';
+
+            let steps = [];
+
+            // Step 1: NFe Created
+            steps.push({
+                dot: 'done',
+                title: 'Nota Fiscal Criada no Bling',
+                desc: 'NFe #' + numero + ' | Serie ' + serie + ' | Valor: ' + formatCurrency(valor),
+                time: formatDateTime(operacao),
+            });
+
+            // Step 2: Dados transmitidos
+            steps.push({
+                dot: 'done',
+                title: 'Dados Transmitidos para ' + sefaz,
+                desc: 'Envio do XML com dados do emitente, destinatario, produtos e impostos para validacao.',
+                time: formatDateTime(emissao),
+            });
+
+            // Step 3: Validacao SEFAZ
+            if (isAuthorized) {
+                steps.push({
+                    dot: 'done',
+                    title: sefaz + ' - Validacao Aprovada',
+                    desc: 'Dados fiscais validados: CNPJ/CPF, inscricao estadual, NCM, CFOP e calculos de impostos conferidos.',
+                    time: formatDateTime(emissao),
+                });
+                steps.push({
+                    dot: 'done',
+                    title: sefaz + ' - Protocolo de Autorizacao',
+                    desc: 'Chave de Acesso: ' + (chave || 'N/A'),
+                    time: formatDateTime(emissao),
+                });
+                steps.push({
+                    dot: 'done',
+                    title: 'DANFE Disponivel para Impressao',
+                    desc: 'Documento auxiliar gerado com sucesso. NFe com validade juridica.',
+                    time: formatDateTime(emissao),
+                });
+            } else if (isRejected) {
+                steps.push({
+                    dot: 'error',
+                    title: sefaz + ' - Nota Rejeitada',
+                    desc: 'A SEFAZ identificou inconsistencias nos dados fiscais. Verifique os dados e tente novamente.',
+                    time: formatDateTime(emissao),
+                });
+            } else if (isCancelled) {
+                steps.push({
+                    dot: 'error',
+                    title: sit === 4 ? 'Nota Fiscal Cancelada' : 'Nota Fiscal Inutilizada',
+                    desc: sit === 4
+                        ? 'Cancelamento registrado junto a ' + sefaz + '. A numeracao foi consumida.'
+                        : 'Numeracao inutilizada junto a ' + sefaz + '.',
+                    time: '',
+                });
+            } else if (isPending) {
+                steps.push({
+                    dot: 'active',
+                    title: 'Aguardando Retorno da ' + sefaz,
+                    desc: 'XML enviado, aguardando validacao fiscal e emissao do protocolo de autorizacao.',
+                    time: '',
+                });
+                steps.push({
+                    dot: 'pending',
+                    title: 'Protocolo de Autorizacao',
+                    desc: 'Pendente - chave de acesso sera gerada apos aprovacao.',
+                    time: '',
+                });
+                steps.push({
+                    dot: 'pending',
+                    title: 'DANFE Disponivel para Impressao',
+                    desc: 'Disponivel apos autorizacao.',
+                    time: '',
+                });
+            }
+
+            let html = '<div class="timeline">';
+            for (const s of steps) {
+                html += '<div class="tl-item">';
+                html += '  <div class="tl-dot ' + s.dot + '"></div>';
+                html += '  <div class="tl-title">' + s.title + '</div>';
+                html += '  <div class="tl-desc">' + s.desc + '</div>';
+                if (s.time) html += '  <div class="tl-time">' + s.time + '</div>';
+                html += '</div>';
+            }
+            html += '</div>';
+
+            // NFe detail box
+            html += '<div class="nfe-detail-box">';
+            html += '<div style="font-size:0.75rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Dados da NFe</div>';
+            html += '<div class="info-row"><span class="info-label">Numero / Serie</span><span class="info-value">' + numero + ' / ' + serie + '</span></div>';
+            html += '<div class="info-row"><span class="info-label">Situacao</span><span class="info-value">' + (sitLabels[sit] || sit) + '</span></div>';
+            html += '<div class="info-row"><span class="info-label">Valor da Nota</span><span class="info-value">' + formatCurrency(valor) + '</span></div>';
+            html += '<div class="info-row"><span class="info-label">Frete</span><span class="info-value">' + formatCurrency(nfe.valorFrete || 0) + '</span></div>';
+            if (emissao) {
+                html += '<div class="info-row"><span class="info-label">Data Emissao</span><span class="info-value">' + formatDateTime(emissao) + '</span></div>';
+            }
+            if (operacao && operacao !== emissao) {
+                html += '<div class="info-row"><span class="info-label">Data Operacao</span><span class="info-value">' + formatDateTime(operacao) + '</span></div>';
+            }
+            html += '<div class="info-row"><span class="info-label">Optante Simples Nacional</span><span class="info-value">' + (nfe.optanteSimplesNacional ? 'Sim' : 'Nao') + '</span></div>';
+            if (chave) {
+                html += '<div class="info-row"><span class="info-label">Chave de Acesso</span><span class="info-value" style="font-size:0.65rem;word-break:break-all;">' + chave + '</span></div>';
+            } else {
+                html += '<div class="info-row"><span class="info-label">Chave de Acesso</span><span class="info-value" style="color:#facc15;">Aguardando SEFAZ</span></div>';
+            }
+
+            // Documents section
+            html += '<div style="font-size:0.75rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin:0.75rem 0 0.5rem;border-top:1px solid #334155;padding-top:0.75rem;">Documentos Disponiveis</div>';
+
+            const danfeUrl = nfe.linkDanfe || '';
+            const pdfUrl = nfe.linkPDF || '';
+
+            if (pdfUrl) {
+                html += '<div class="info-row"><span class="info-label">DANFE (PDF)</span><span class="info-value"><a href="' + pdfUrl + '" target="_blank" style="color:#B5C47E;text-decoration:underline;">' + (isAuthorized ? 'Imprimir DANFE' : 'Pre-visualizar DANFE') + '</a></span></div>';
+            }
+            if (danfeUrl && danfeUrl !== pdfUrl) {
+                html += '<div class="info-row"><span class="info-label">DANFE (Web)</span><span class="info-value"><a href="' + danfeUrl + '" target="_blank" style="color:#B5C47E;text-decoration:underline;">Visualizar online</a></span></div>';
+            }
+            if (xmlUrl) {
+                html += '<div class="info-row"><span class="info-label">XML da NFe</span><span class="info-value"><a href="' + xmlUrl + '" target="_blank" style="color:#B5C47E;text-decoration:underline;">Download XML</a></span></div>';
+            } else {
+                html += '<div class="info-row"><span class="info-label">XML da NFe</span><span class="info-value" style="color:#facc15;">Gerado apos autorizacao</span></div>';
+            }
+            html += '<div class="info-row"><span class="info-label">Consulta SEFAZ</span><span class="info-value"><a href="#" onclick="openSefazModal(); return false;" style="color:#B5C47E;text-decoration:underline;">Consultar na SEFAZ &#8599;</a></span></div>';
+
+            // Fiscal data for items
+            const nfeItens = nfe.itens || [];
+            if (nfeItens.length > 0) {
+                html += '<div style="font-size:0.75rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin:0.75rem 0 0.5rem;border-top:1px solid #334155;padding-top:0.75rem;">Dados Fiscais dos Itens</div>';
+                for (const item of nfeItens) {
+                    const imp = item.impostos || {};
+                    const icms = imp.icms || {};
+                    const origemMap = {0:'Nacional',1:'Estrangeira - importacao direta',2:'Estrangeira - adquirida mercado interno'};
+                    html += '<div style="background:#0f172a;border:1px solid #1e293b;border-radius:0.375rem;padding:0.5rem;margin-bottom:0.5rem;">';
+                    html += '<div style="font-size:0.75rem;font-weight:600;color:#e2e8f0;margin-bottom:0.35rem;">' + (item.codigo || '') + ' - ' + (item.descricao || '') + '</div>';
+                    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.15rem 1rem;font-size:0.7rem;">';
+                    html += '<div><span style="color:#64748b;">NCM:</span> <span style="color:#e2e8f0;">' + (item.classificacaoFiscal || '-') + '</span></div>';
+                    html += '<div><span style="color:#64748b;">CFOP:</span> <span style="color:#e2e8f0;">' + (item.cfop || '-') + '</span></div>';
+                    html += '<div><span style="color:#64748b;">CEST:</span> <span style="color:#e2e8f0;">' + (item.cest || '-') + '</span></div>';
+                    html += '<div><span style="color:#64748b;">GTIN/EAN:</span> <span style="color:#e2e8f0;">' + (item.gtin || '-') + '</span></div>';
+                    html += '<div><span style="color:#64748b;">Origem:</span> <span style="color:#e2e8f0;">' + (origemMap[item.origem] || item.origem) + '</span></div>';
+                    html += '<div><span style="color:#64748b;">Valor:</span> <span style="color:#e2e8f0;">' + formatCurrency(item.valorTotal || item.valor) + '</span></div>';
+                    html += '<div><span style="color:#64748b;">Tributos aprox:</span> <span style="color:#e2e8f0;">' + formatCurrency(imp.valorAproximadoTotalTributos) + '</span></div>';
+                    html += '<div><span style="color:#64748b;">ICMS:</span> <span style="color:#e2e8f0;">Aliq ' + (icms.aliquota || 0) + '% / Val ' + formatCurrency(icms.valor) + '</span></div>';
+                    if (item.informacoesAdicionais) {
+                        html += '<div style="grid-column:1/-1;"><span style="color:#64748b;">Info:</span> <span style="color:#94a3b8;">' + item.informacoesAdicionais + '</span></div>';
+                    }
+                    html += '</div></div>';
+                }
+            }
+
+            // Parcelas com status de recebimento
+            const nfeParcelas = nfe.parcelas || [];
+            if (nfeParcelas.length > 0) {
+                const sitMap = {1:['Em aberto','#facc15'], 2:['Recebido','#4ade80'], 3:['Parcial','#fb923c'], 4:['Devolvido','#f87171'], 5:['Cancelado','#f87171']};
+                const totalParcelas = nfeParcelas.reduce((s, p) => s + (p.valor || 0), 0);
+                const totalRecebido = contasReceber.filter(c => c.situacao === 2).reduce((s, c) => s + (c.valor || 0), 0);
+                const todasRecebidas = contasReceber.length > 0 && contasReceber.every(c => c.situacao === 2);
+                const algumEmAberto = contasReceber.some(c => c.situacao === 1);
+                const temRegistro = contasReceber.length > 0;
+
+                let statusGeral = '';
+                if (!temRegistro) statusGeral = '<span style="font-size:0.7rem;padding:0.2rem 0.6rem;border-radius:9999px;background:#64748b22;color:#64748b;font-weight:600;">Sem registro financeiro</span>';
+                else if (todasRecebidas) statusGeral = '<span style="font-size:0.7rem;padding:0.2rem 0.6rem;border-radius:9999px;background:#4ade8022;color:#4ade80;font-weight:600;">&#10003; Totalmente Recebido</span>';
+                else if (algumEmAberto && totalRecebido > 0) statusGeral = '<span style="font-size:0.7rem;padding:0.2rem 0.6rem;border-radius:9999px;background:#fb923c22;color:#fb923c;font-weight:600;">&#9673; Parcialmente Recebido (' + formatCurrency(totalRecebido) + ' de ' + formatCurrency(totalParcelas) + ')</span>';
+                else statusGeral = '<span style="font-size:0.7rem;padding:0.2rem 0.6rem;border-radius:9999px;background:#facc1522;color:#facc15;font-weight:600;">&#9711; Aguardando Pagamento</span>';
+
+                html += '<div style="font-size:0.75rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin:0.75rem 0 0.5rem;border-top:1px solid #334155;padding-top:0.75rem;display:flex;justify-content:space-between;align-items:center;">Pagamento na NFe ' + statusGeral + '</div>';
+
+                for (let i = 0; i < nfeParcelas.length; i++) {
+                    const p = nfeParcelas[i];
+                    const conta = contasReceber.find(c => Math.abs((c.valor || 0) - (p.valor || 0)) < 0.01) || contasReceber[i];
+                    const sit = conta?.situacao;
+                    const [sitLabel, sitColor] = sitMap[sit] || ['Sem registro', '#64748b'];
+                    const codigoFiscalMap = {1:'Dinheiro',2:'Cheque',3:'Cartao Credito',4:'Cartao Debito',5:'Credito Loja',10:'Vale Alimentacao',11:'Vale Refeicao',12:'Vale Presente',13:'Vale Combustivel',14:'Duplicata Mercantil',15:'Boleto',16:'Deposito',17:'PIX',18:'Transferencia',19:'Programa Fidelidade',90:'Sem Pagamento',99:'Outros'};
+                    const formaCode = p.formaPagamento?.codigoFiscal || conta?.formaPagamento?.codigoFiscal;
+                    const forma = codigoFiscalMap[formaCode] || '';
+                    const contaContabil = conta?.contaContabil?.descricao || '';
+                    const vencConta = conta?.vencimento;
+
+                    html += '<div style="background:#0f172a;border:1px solid #1e293b;border-radius:0.375rem;padding:0.6rem;margin-bottom:0.4rem;">';
+                    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem;">';
+                    html += '<span style="font-size:0.75rem;font-weight:600;color:#e2e8f0;">' + (nfeParcelas.length > 1 ? 'Parcela ' + (i + 1) : 'Pagamento') + '</span>';
+                    html += '<span style="font-size:0.85rem;font-weight:700;color:#f1f5f9;">' + formatCurrency(p.valor) + '</span>';
+                    html += '</div>';
+                    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.2rem 1rem;font-size:0.7rem;">';
+                    html += '<div><span style="color:#64748b;">Vencimento:</span> <span style="color:#e2e8f0;">' + formatDate(vencConta || p.data) + '</span></div>';
+                    if (forma) html += '<div><span style="color:#64748b;">Forma:</span> <span style="color:#e2e8f0;">' + forma + '</span></div>';
+                    html += '<div><span style="color:#64748b;">Situacao:</span> <span style="color:' + sitColor + ';font-weight:600;">' + sitLabel + '</span></div>';
+                    if (contaContabil) html += '<div><span style="color:#64748b;">Conta:</span> <span style="color:#e2e8f0;">' + contaContabil + '</span></div>';
+                    html += '</div></div>';
+                }
+            }
+
+            html += '</div>';
+
+            return html;
+        }
+
+        function formatDateTime(dt) {
+            if (!dt || dt.startsWith('0000')) return '';
+            const parts = dt.split(' ');
+            const [y, m, d] = (parts[0] || '').split('-');
+            const time = parts[1] || '';
+            if (!y) return dt;
+            return d + '/' + m + '/' + y + (time ? ' ' + time : '');
+        }
+
+        function showToast(html, type = 'info') {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            const div = document.createElement('div');
+            div.className = `toast toast-${type}`;
+            div.innerHTML = html;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 8000);
+        }
+
+        async function cancelNfe(nfeId) {
+            if (!confirm('Tem certeza que deseja cancelar esta Nota Fiscal? Esta acao nao pode ser desfeita.')) return;
+            try {
+                const resp = await fetch(`{{ BASE }}/api/bling/nfe/${nfeId}/cancel`, { method: 'POST' });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    const detail = data.detail || JSON.stringify(data.error || data);
+                    throw new Error(detail);
+                }
+                showToast('Nota Fiscal cancelada com sucesso!', 'success');
+                setTimeout(() => loadOrder(), 1500);
+            } catch (err) {
+                showToast('Erro ao cancelar NFe: ' + err.message, 'error');
+            }
+        }
+
+        async function generateNfe() {
+            const btn = document.getElementById('btnNfe');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-sm" style="border-color:rgba(255,255,255,0.3);border-top-color:white;"></span> Enviando para SEFAZ...';
+
+            try {
+                const resp = await fetch(`{{ BASE }}/api/bling/orders/${ORDER_ID}/nfe`, { method: 'POST' });
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    const detail = data.detail || JSON.stringify(data.error || data);
+                    throw new Error(detail);
+                }
+
+                if (data._existing) {
+                    // NFe already existed, just wasn't linked
+                    const sitMap = {1:'Pendente',5:'Autorizada'};
+                    showToast('NFe #' + (data.numero || '') + ' ja existente (' + (sitMap[data.situacao] || '') + '). Carregando...', 'info');
+                } else if (data._sefaz === 'autorizada') {
+                    showToast('NFe #' + (data.numero || '') + ' autorizada pela SEFAZ!', 'success');
+                } else if (data._sefaz_erro) {
+                    showToast('NFe #' + (data.numero || '') + ' criada, mas erro ao enviar para SEFAZ: ' + data._sefaz_erro, 'error');
+                } else if (data._sefaz) {
+                    showToast('NFe #' + (data.numero || '') + ' - SEFAZ: ' + data._sefaz, 'info');
+                } else {
+                    showToast('NFe #' + (data.numero || '') + ' criada. Aguardando SEFAZ...', 'success');
+                }
+
+                setTimeout(() => loadOrder(), 1500);
+            } catch (err) {
+                showToast('Erro ao gerar NFe: ' + err.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<span class="btn-icon">&#128196;</span> Gerar Nota Fiscal';
+            }
+        }
+
+        async function retryNfe(nfeId) {
+            const btn = document.getElementById('btnRetry');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-sm" style="border-color:rgba(255,255,255,0.3);border-top-color:white;"></span> Corrigindo e reenviando...';
+            }
+
+            try {
+                const resp = await fetch(`{{ BASE }}/api/bling/nfe/${nfeId}/retry?order_id=${ORDER_ID}`, { method: 'POST' });
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    throw new Error(data.detail || 'Erro ao reenviar');
+                }
+
+                if (data._sefaz === 'autorizada') {
+                    showToast('NFe corrigida e autorizada pela SEFAZ!', 'success');
+                } else if (data._sefaz_erro) {
+                    showToast('Dados corrigidos, mas erro ao enviar: ' + data._sefaz_erro, 'error');
+                } else if (data._sefaz) {
+                    showToast('Dados corrigidos - SEFAZ: ' + data._sefaz, 'info');
+                } else {
+                    showToast('Dados corrigidos e reenviados para a SEFAZ.', 'success');
+                }
+
+                if (nfePolling) { clearInterval(nfePolling); nfePolling = null; }
+                setTimeout(() => loadOrder(), 1500);
+            } catch (err) {
+                showToast('Erro: ' + err.message, 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span class="btn-icon">&#128260;</span> Corrigir e Reenviar';
+                }
+            }
+        }
+
+        function openSefazModal() {
+            const nfe = currentNfe;
+            const o = currentOrder;
+            const chave = nfe?.chaveAcesso || '';
+            const numero = nfe?.numero || '-';
+            const sit = nfe?.situacao || 0;
+            const sitLabels = {1:'Pendente',2:'Rejeitada',3:'Denegada',4:'Cancelada',5:'Autorizada',6:'Inutilizada'};
+            const sitLabel = sitLabels[sit] || '-';
+            const emissao = nfe?.dataEmissao ? formatDateTime(nfe.dataEmissao) : '-';
+            const valor = nfe?.valorNota ? formatCurrency(nfe.valorNota) : '-';
+            const cliente = o?.contato?.nome || '-';
+            const doc = o?.contato?.numeroDocumento || '-';
+            const sefazUrl = chave
+                ? 'https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa&tipoConteudo=XbSeqxE8pl8=&nfe=' + chave
+                : '';
+
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+            overlay.innerHTML = `
+                <div class="modal">
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+                    <div class="modal-title">Consulta NFe na SEFAZ</div>
+
+                    <div class="modal-field">
+                        <div class="modal-label">Nota Fiscal / Status</div>
+                        <div class="modal-value"><span>#${numero} - ${sitLabel}</span></div>
+                    </div>
+
+                    <div class="modal-field">
+                        <div class="modal-label">Emissao / Valor</div>
+                        <div class="modal-value"><span>${emissao} - ${valor}</span></div>
+                    </div>
+
+                    <div class="modal-field">
+                        <div class="modal-label">Destinatario / Documento</div>
+                        <div class="modal-value"><span>${cliente} - ${doc}</span></div>
+                    </div>
+
+                    <div class="modal-field">
+                        <div class="modal-label">Chave de Acesso (44 digitos)</div>
+                        <div class="modal-value">
+                            <span>${chave || 'Aguardando geracao pela SEFAZ...'}</span>
+                            ${chave ? '<button class="copy-btn" onclick="copyChave(this, \\\'' + chave + '\\\')">Copiar</button>' : ''}
+                        </div>
+                    </div>
+
+                    ${chave ? `
+                    <div class="modal-field">
+                        <div class="modal-label">Link de Consulta na SEFAZ</div>
+                        <div class="modal-value" style="font-size:0.65rem;">
+                            <span><a href="${sefazUrl}" target="_blank" style="color:#B5C47E;word-break:break-all;">${sefazUrl}</a></span>
+                            <button class="copy-btn" onclick="copyChave(this, '${sefazUrl}')">Copiar</button>
+                        </div>
+                    </div>
+                    ` : `
+                    <div class="modal-field">
+                        <div class="modal-label">Link de Consulta na SEFAZ</div>
+                        <div class="modal-value"><span style="color:#64748b;">Disponivel apos autorizacao da SEFAZ</span></div>
+                    </div>
+                    `}
+
+                    <div class="modal-actions">
+                        <button class="btn-modal-close" onclick="this.closest('.modal-overlay').remove()">Fechar</button>
+                        ${chave ? '<a class="btn-sefaz-go" href="' + sefazUrl + '" target="_blank">Consultar na SEFAZ &#8599;</a>' : ''}
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+        }
+
+        function copyChave(btn, chave) {
+            navigator.clipboard.writeText(chave);
+            btn.textContent = 'Copiado!';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+        }
+
+        function printEtiqueta() {
+            if (!currentOrder) return;
+            const o = currentOrder;
+            const et = o.transporte?.etiqueta || {};
+            const itens = o.itens || [];
+
+            const endLine = [
+                et.endereco,
+                et.numero && et.numero !== '0' ? et.numero : null,
+            ].filter(Boolean).join(', ');
+
+            const itensHtml = itens.map(i =>
+                `<tr>
+                    <td style="padding:2px 6px;font-size:11px;">${i.codigo || ''}</td>
+                    <td style="padding:2px 6px;font-size:11px;">${i.descricao || ''}</td>
+                    <td style="padding:2px 6px;font-size:11px;text-align:center;">${i.quantidade}</td>
+                </tr>`
+            ).join('');
+
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Etiqueta - Pedido #${o.numero}</title>
+    <style>
+        @page { size: 100mm 150mm; margin: 5mm; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 8mm; width: 100mm; }
+        .etiqueta { border: 2px solid #000; padding: 8px; }
+        .header-et { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; }
+        .header-et h2 { margin: 0; font-size: 14px; }
+        .header-et p { margin: 2px 0; font-size: 10px; color: #555; }
+        .section-et { margin-bottom: 8px; }
+        .section-et h3 { font-size: 11px; margin: 0 0 4px; text-transform: uppercase; color: #333;
+                         border-bottom: 1px solid #ccc; padding-bottom: 2px; }
+        .dest-name { font-size: 14px; font-weight: bold; margin: 4px 0; }
+        .dest-addr { font-size: 11px; line-height: 1.5; }
+        .dest-cep { font-size: 16px; font-weight: bold; margin-top: 4px; letter-spacing: 2px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { font-size: 10px; text-align: left; padding: 2px 6px; border-bottom: 1px solid #999; }
+        .pedido-info { font-size: 10px; color: #555; margin-top: 6px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="etiqueta">
+        <div class="header-et">
+            <h2>PEDIDO #${o.numero}</h2>
+            <p>${formatDate(o.data)} | ${o.numeroLoja ? 'Loja: ' + o.numeroLoja : ''}</p>
+        </div>
+
+        <div class="section-et">
+            <h3>Destinatario</h3>
+            <div class="dest-name">${et.nome || o.contato?.nome || ''}</div>
+            <div class="dest-addr">
+                ${endLine}${et.complemento ? '<br>' + et.complemento : ''}<br>
+                ${et.bairro || ''}<br>
+                ${et.municipio || ''} - ${et.uf || ''}
+            </div>
+            <div class="dest-cep">${et.cep || ''}</div>
+        </div>
+
+        ${itens.length > 0 ? `
+        <div class="section-et">
+            <h3>Conteudo (${itens.length} ${itens.length === 1 ? 'item' : 'itens'})</h3>
+            <table>
+                <thead><tr><th>Cod</th><th>Descricao</th><th style="text-align:center">Qtd</th></tr></thead>
+                <tbody>${itensHtml}</tbody>
+            </table>
+        </div>` : ''}
+
+        <div class="pedido-info">
+            ${o.contato?.numeroDocumento ? 'Doc: ' + o.contato.numeroDocumento + ' | ' : ''}
+            Volumes: ${o.transporte?.quantidadeVolumes || 1}
+            ${o.transporte?.pesoBruto ? ' | Peso: ' + o.transporte.pesoBruto + 'kg' : ''}
+        </div>
+    </div>
+    <scr` + `ipt>window.onload = function() { window.print(); }</scr` + `ipt>
+</body>
+</html>`;
+
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+        }
+
+        function formatCNPJ(v) {
+            if (!v || v.length !== 14) return v || '';
+            return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+        }
+        function formatCEP(v) {
+            if (!v || v.length !== 8) return v || '';
+            return v.replace(/^(\d{5})(\d{3})$/, '$1-$2');
+        }
+
+        function printItens() {
+            if (!currentOrder) return;
+            const o = currentOrder;
+            const itens = o.itens || [];
+            const emp = empresaData || {};
+            const empEnd = emp.endereco || {};
+
+            const empRazao = emp.razaoSocial || '';
+            const empDoc = formatCNPJ(emp.cnpj);
+            const empIe = emp.ie || '';
+            const empEndLine = [empEnd.endereco, empEnd.numero].filter(Boolean).join(', ');
+            const empCidade = [empEnd.municipio, empEnd.uf].filter(Boolean).join(' - ');
+            const empCep = formatCEP(empEnd.cep);
+
+            const cliente = o.contato?.nome || '';
+            const clienteDoc = o.contato?.numeroDocumento || '';
+
+            const itensHtml = itens.map((i, idx) =>
+                `<tr style="${idx % 2 === 0 ? '' : 'background:#f8fafc;'}">
+                    <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;">${i.codigo || '-'}</td>
+                    <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;">${i.descricao || '-'}</td>
+                    <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;text-align:center;">${i.quantidade}</td>
+                    <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;text-align:right;">${formatCurrency(i.valor)}</td>
+                    <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;text-align:right;">${formatCurrency(i.desconto)}</td>
+                    <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;text-align:right;font-weight:600;">${formatCurrency(i.valor * i.quantidade - (i.desconto || 0))}</td>
+                </tr>`
+            ).join('');
+
+            const totalItens = itens.reduce((s, i) => s + (i.valor * i.quantidade - (i.desconto || 0)), 0);
+
+            const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Itens - Pedido #${o.numero}</title>
+    <style>
+        @page { size: A4; margin: 15mm; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; color: #1e293b; }
+        .moldura { border: 2px solid #334155; padding: 20px; min-height: calc(100vh - 30mm); }
+        .empresa { border-bottom: 2px solid #334155; padding-bottom: 14px; margin-bottom: 14px; display: flex; justify-content: space-between; }
+        .empresa-nome { font-size: 16px; font-weight: 700; color: #0f172a; }
+        .empresa-info { font-size: 9px; color: #64748b; line-height: 1.6; margin-top: 4px; }
+        .empresa-right { text-align: right; font-size: 9px; color: #64748b; line-height: 1.6; }
+        .pedido-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; }
+        .pedido-title { font-size: 14px; font-weight: 700; }
+        .pedido-meta { font-size: 10px; color: #64748b; text-align: right; line-height: 1.6; }
+        table { width: 100%; border-collapse: collapse; }
+        th { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; text-align: left; padding: 8px 10px; border-bottom: 2px solid #334155; }
+        .total-row td { font-weight: 700; border-top: 2px solid #334155; padding: 10px; font-size: 12px; }
+        .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 8px; color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div class="moldura">
+        <div class="empresa">
+            <div>
+                ${empRazao ? '<div class="empresa-nome">' + empRazao + '</div>' : ''}
+                <div class="empresa-info">
+                    ${empDoc ? 'CNPJ: ' + empDoc : ''}${empIe ? ' | IE: ' + empIe : ''}<br>
+                    ${empEndLine}${empEnd.bairro ? ' - ' + empEnd.bairro : ''}<br>
+                    ${empCidade}${empCep ? ' - CEP: ' + empCep : ''}
+                </div>
+            </div>
+        </div>
+
+        <div class="pedido-header">
+            <div>
+                <div class="pedido-title">PEDIDO #${o.numero}</div>
+                <div style="font-size:10px;color:#64748b;margin-top:2px;">Listagem de Itens</div>
+            </div>
+            <div class="pedido-meta">
+                Data: ${formatDate(o.data)}<br>
+                Cliente: ${cliente}${clienteDoc ? '<br>Doc: ' + clienteDoc : ''}
+                ${o.numeroLoja ? '<br>Loja: ' + o.numeroLoja : ''}
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Codigo</th>
+                    <th>Descricao</th>
+                    <th style="text-align:center;">Qtd</th>
+                    <th style="text-align:right;">Valor Unit.</th>
+                    <th style="text-align:right;">Desconto</th>
+                    <th style="text-align:right;">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${itensHtml}
+                <tr class="total-row">
+                    <td colspan="2">${itens.length} ${itens.length === 1 ? 'item' : 'itens'}</td>
+                    <td style="text-align:center;">${itens.reduce((s, i) => s + i.quantidade, 0)}</td>
+                    <td></td>
+                    <td></td>
+                    <td style="text-align:right;">${formatCurrency(totalItens)}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            Documento gerado em ${new Date().toLocaleDateString('pt-BR')} as ${new Date().toLocaleTimeString('pt-BR')}
+            ${empRazao ? ' | ' + empRazao : ''}
+        </div>
+    </div>
+    <scr` + `ipt>window.onload = function() { window.print(); }</scr` + `ipt>
+</body>
+</html>`;
+
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+        }
+
+        loadOrder();
+    </script>
+</body>
+</html>

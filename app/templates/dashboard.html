@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consolidado - Bling x Mercado Livre</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid #334155;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-brand { display: flex; align-items: center; gap: 0.75rem; }
+        .header-logo { width: 36px; height: 36px; filter: hue-rotate(35deg) saturate(1.2); }
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #8B8C4A, #B5C47E);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-actions { display: flex; gap: 1rem; align-items: center; }
+        nav { display: flex; gap: 0.5rem; }
+        nav a {
+            color: #94a3b8; text-decoration: none; padding: 0.4rem 0.75rem;
+            border-radius: 0.375rem; font-size: 0.85rem; border: 1px solid #334155; transition: all 0.2s;
+        }
+        nav a:hover { border-color: #B5C47E; color: #B5C47E; }
+        nav a.active { background: #8B8C4A; color: white; border-color: #8B8C4A; }
+        .btn {
+            background: #93A25C; color: white; border: none;
+            padding: 0.5rem 1.25rem; border-radius: 0.5rem;
+            cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: background 0.2s;
+        }
+        .btn:hover { background: #6B7A3D; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-outline {
+            background: transparent; border: 1px solid #475569; color: #94a3b8;
+        }
+        .btn-outline:hover { border-color: #B5C47E; color: #B5C47E; }
+        .last-update { color: #64748b; font-size: 0.8rem; }
+        .container { padding: 1.5rem 2rem; max-width: 1400px; margin: 0 auto; }
+        .filters {
+            display: flex; gap: 1rem; margin-bottom: 1.5rem;
+            flex-wrap: wrap; align-items: center;
+        }
+        .filter-group { display: flex; align-items: center; gap: 0.5rem; }
+        .filter-group label { font-size: 0.8rem; color: #94a3b8; }
+        .filter-group input, .filter-group select {
+            background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
+            padding: 0.4rem 0.75rem; border-radius: 0.375rem; font-size: 0.8rem;
+        }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .card {
+            background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem;
+            padding: 1.25rem; position: relative; overflow: hidden;
+        }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; }
+        .card.blue::before { background: #8B8C4A; }
+        .card.green::before { background: #22c55e; }
+        .card.yellow::before { background: #eab308; }
+        .card.red::before { background: #ef4444; }
+        .card.purple::before { background: #a855f7; }
+        .card-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+        .card-value { font-size: 2rem; font-weight: 700; }
+        .card-sub { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
+        .card.blue .card-value { color: #B5C47E; }
+        .card.green .card-value { color: #4ade80; }
+        .card.yellow .card-value { color: #facc15; }
+        .card.red .card-value { color: #f87171; }
+        .card.purple .card-value { color: #c084fc; }
+        .health-bar-container { margin-bottom: 1.5rem; }
+        .health-label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.5rem; }
+        .health-bar { height: 12px; background: #334155; border-radius: 6px; overflow: hidden; }
+        .health-fill { height: 100%; border-radius: 6px; transition: width 0.6s ease; }
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        .chart-card {
+            background: #1e293b; border: 1px solid #334155;
+            border-radius: 0.75rem; padding: 1.25rem;
+        }
+        .chart-card h3 { font-size: 0.95rem; margin-bottom: 1rem; color: #cbd5e1; }
+        .chart-wrapper { position: relative; height: 280px; }
+        .section-title {
+            font-size: 1.1rem; font-weight: 600; color: #cbd5e1;
+            margin-bottom: 1rem; padding-bottom: 0.5rem;
+            border-bottom: 1px solid #334155;
+        }
+        .table-section {
+            background: #1e293b; border: 1px solid #334155;
+            border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1.5rem;
+        }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .table-header h3 { font-size: 0.95rem; color: #cbd5e1; }
+        .tab-buttons { display: flex; gap: 0.5rem; }
+        .tab-btn {
+            background: #0f172a; border: 1px solid #334155; color: #94a3b8;
+            padding: 0.35rem 0.75rem; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem;
+        }
+        .tab-btn.active { background: #8B8C4A; color: white; border-color: #8B8C4A; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 0.6rem 0.75rem; font-size: 0.7rem;
+            color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #334155;
+        }
+        td { padding: 0.6rem 0.75rem; font-size: 0.8rem; border-bottom: 1px solid #1e293b; }
+        tr:hover { background: #0f172a44; }
+        .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; }
+        .badge-error { background: #7f1d1d; color: #fca5a5; }
+        .badge-warning { background: #713f12; color: #fde047; }
+        .badge-info { background: #2d3a1f; color: #C8D9A0; }
+        .badge-bling { background: #2d3a1f; color: #B5C47E; }
+        .badge-ml { background: #422006; color: #facc15; }
+        .loading { display: flex; align-items: center; justify-content: center; padding: 3rem; color: #64748b; }
+        .spinner {
+            width: 24px; height: 24px; border: 3px solid #334155; border-top-color: #8B8C4A;
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 0.75rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-msg {
+            background: #7f1d1d33; border: 1px solid #7f1d1d; color: #fca5a5;
+            padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.85rem;
+        }
+        .pending-count {
+            display: inline-block; background: #ef4444; color: white;
+            border-radius: 9999px; font-size: 0.65rem; padding: 0.1rem 0.4rem;
+            margin-left: 0.25rem; vertical-align: super;
+        }
+        @media (max-width: 768px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .cards { grid-template-columns: repeat(2, 1fr); }
+            .container { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-brand">
+            <img class="header-logo" src="{{ BASE }}/static/logo.png" alt="Logo">
+            <h1>Consolidado — Sincronismo</h1>
+        </div>
+        <div class="header-actions">
+            <nav>
+                <a href="{{ BASE }}/bling">Bling</a>
+                <a href="{{ BASE }}/ml">Mercado Livre</a>
+                <a href="{{ BASE }}/" class="active">Consolidado</a>
+            </nav>
+            <span class="last-update" id="lastUpdate"></span>
+            <button class="btn" id="refreshBtn" onclick="loadAll()">Atualizar</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="filters">
+            <div class="filter-group">
+                <label>De:</label>
+                <input type="date" id="dateFrom">
+            </div>
+            <div class="filter-group">
+                <label>Ate:</label>
+                <input type="date" id="dateTo">
+            </div>
+            <div class="filter-group">
+                <label>Severidade:</label>
+                <select id="severityFilter">
+                    <option value="all">Todas</option>
+                    <option value="error">Erro</option>
+                    <option value="warning">Aviso</option>
+                    <option value="info">Info</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="errorContainer"></div>
+
+        <!-- Health Bar -->
+        <div class="health-bar-container" id="healthSection" style="display:none;">
+            <div class="health-label">
+                <span>Saude do Sincronismo</span>
+                <span id="healthPercent">0%</span>
+            </div>
+            <div class="health-bar">
+                <div class="health-fill" id="healthFill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="cards" id="summaryCards">
+            <div class="loading"><div class="spinner"></div>Carregando resumo...</div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>Estoque: Bling vs Mercado Livre (Top 15)</h3>
+                <div class="chart-wrapper"><canvas id="stockChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>Distribuicao de Divergencias</h3>
+                <div class="chart-wrapper"><canvas id="divergenceChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Pending Sync Section -->
+        <div class="table-section" id="pendingSyncSection">
+            <div class="table-header">
+                <h3>Pendente de Sincronizacao <span class="pending-count" id="pendingCount">0</span></h3>
+                <div class="tab-buttons">
+                    <button class="tab-btn active" data-ptab="missing-ml" onclick="switchPendingTab('missing-ml')">Faltam no ML</button>
+                    <button class="tab-btn" data-ptab="missing-bling" onclick="switchPendingTab('missing-bling')">Faltam no Bling</button>
+                    <button class="tab-btn" data-ptab="price-diff" onclick="switchPendingTab('price-diff')">Precos Diferentes</button>
+                    <button class="tab-btn" data-ptab="stock-diff" onclick="switchPendingTab('stock-diff')">Estoque Diferente</button>
+                </div>
+            </div>
+
+            <div id="ptab-missing-ml">
+                <p style="font-size:0.8rem;color:#94a3b8;margin-bottom:0.75rem;">Produtos cadastrados no Bling que nao existem no Mercado Livre</p>
+                <table>
+                    <thead><tr><th>SKU</th><th>Produto</th><th>Preco Bling</th><th>Estoque Bling</th><th>Acao</th></tr></thead>
+                    <tbody id="missingMlBody">
+                        <tr><td colspan="5"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="ptab-missing-bling" style="display:none;">
+                <p style="font-size:0.8rem;color:#94a3b8;margin-bottom:0.75rem;">Anuncios no Mercado Livre que nao existem no Bling</p>
+                <table>
+                    <thead><tr><th>SKU</th><th>Anuncio</th><th>Preco ML</th><th>Estoque ML</th><th>MLB ID</th></tr></thead>
+                    <tbody id="missingBlingBody">
+                        <tr><td colspan="5"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="ptab-price-diff" style="display:none;">
+                <p style="font-size:0.8rem;color:#94a3b8;margin-bottom:0.75rem;">Produtos com precos diferentes entre Bling e Mercado Livre</p>
+                <table>
+                    <thead><tr><th>SKU</th><th>Produto</th><th>Preco Bling</th><th>Preco ML</th><th>Diferenca</th></tr></thead>
+                    <tbody id="priceDiffBody">
+                        <tr><td colspan="5"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="ptab-stock-diff" style="display:none;">
+                <p style="font-size:0.8rem;color:#94a3b8;margin-bottom:0.75rem;">Produtos com estoque diferente entre Bling e Mercado Livre</p>
+                <table>
+                    <thead><tr><th>SKU</th><th>Produto</th><th>Estoque Bling</th><th>Estoque ML</th><th>Diferenca</th></tr></thead>
+                    <tbody id="stockDiffBody">
+                        <tr><td colspan="5"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Divergence Tables -->
+        <div class="table-section">
+            <div class="table-header">
+                <h3>Todas as Divergencias</h3>
+                <div class="tab-buttons">
+                    <button class="tab-btn active" data-tab="products" onclick="switchTab('products')">Produtos</button>
+                    <button class="tab-btn" data-tab="orders" onclick="switchTab('orders')">Pedidos</button>
+                    <button class="tab-btn" data-tab="stock" onclick="switchTab('stock')">Estoque</button>
+                </div>
+            </div>
+
+            <div id="tab-products">
+                <table>
+                    <thead>
+                        <tr><th>SKU</th><th>Produto</th><th>Campo</th><th>Bling</th><th>Mercado Livre</th><th>Severidade</th></tr>
+                    </thead>
+                    <tbody id="productsTableBody">
+                        <tr><td colspan="6"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="tab-orders" style="display:none;">
+                <table>
+                    <thead>
+                        <tr><th>Pedido</th><th>Data</th><th>Campo</th><th>Bling</th><th>Mercado Livre</th><th>Severidade</th></tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                        <tr><td colspan="6"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="tab-stock" style="display:none;">
+                <table>
+                    <thead>
+                        <tr><th>SKU</th><th>Produto</th><th>Estoque Bling</th><th>Estoque ML</th><th>Diferenca</th></tr>
+                    </thead>
+                    <tbody id="stockTableBody">
+                        <tr><td colspan="5"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stockChartInstance = null;
+        let divergenceChartInstance = null;
+        let allData = { products: null, orders: null, stock: null, summary: null };
+
+        const today = new Date();
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+        document.getElementById('dateFrom').value = weekAgo.toISOString().split('T')[0];
+
+        document.getElementById('severityFilter').addEventListener('change', () => renderTables());
+
+        function showError(msg) {
+            document.getElementById('errorContainer').innerHTML = `<div class="error-msg">${msg}</div>`;
+        }
+
+        async function fetchAPI(endpoint) {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+            const resp = await fetch(`{{ BASE }}/api/sync/${endpoint}?${params}`);
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.detail || `Erro ao carregar ${endpoint}`);
+            }
+            return resp.json();
+        }
+
+        async function loadAll() {
+            document.getElementById('errorContainer').innerHTML = '';
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            btn.textContent = 'Carregando...';
+
+            try {
+                const [products, orders, stock, summary] = await Promise.all([
+                    fetchAPI('products'),
+                    fetchAPI('orders'),
+                    fetchAPI('stock'),
+                    fetchAPI('summary'),
+                ]);
+
+                allData = { products, orders, stock, summary };
+
+                renderSummaryCards(summary);
+                renderHealthBar(summary);
+                renderStockChart(stock);
+                renderDivergenceChart(summary);
+                renderPendingSync(products, stock);
+                renderTables();
+
+                document.getElementById('lastUpdate').textContent =
+                    `Atualizado: ${new Date().toLocaleString('pt-BR')}`;
+            } catch (err) {
+                showError(`Falha ao carregar dados: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Atualizar';
+            }
+        }
+
+        function renderSummaryCards(s) {
+            const health = s.health_percentage.toFixed(1);
+            document.getElementById('summaryCards').innerHTML = `
+                <div class="card blue">
+                    <div class="card-label">Produtos Bling</div>
+                    <div class="card-value">${s.total_products_bling}</div>
+                    <div class="card-sub">${s.products_missing_ml} ausentes no ML</div>
+                </div>
+                <div class="card purple">
+                    <div class="card-label">Produtos ML</div>
+                    <div class="card-value">${s.total_products_ml}</div>
+                    <div class="card-sub">${s.products_missing_bling} ausentes no Bling</div>
+                </div>
+                <div class="card green">
+                    <div class="card-label">Sincronizados</div>
+                    <div class="card-value">${s.products_synced + s.orders_synced + s.stock_synced}</div>
+                    <div class="card-sub">Produtos + Pedidos + Estoque</div>
+                </div>
+                <div class="card yellow">
+                    <div class="card-label">Divergencias</div>
+                    <div class="card-value">${s.products_divergent + s.orders_divergent + s.stock_divergent}</div>
+                    <div class="card-sub">Requerem atencao</div>
+                </div>
+                <div class="card red">
+                    <div class="card-label">Pedidos Pendentes</div>
+                    <div class="card-value">${s.orders_divergent}</div>
+                    <div class="card-sub">${s.total_orders_ml} pedidos ML / ${s.total_orders_bling} Bling</div>
+                </div>
+                <div class="card ${health >= 80 ? 'green' : health >= 50 ? 'yellow' : 'red'}">
+                    <div class="card-label">Saude Geral</div>
+                    <div class="card-value">${health}%</div>
+                    <div class="card-sub">${health >= 80 ? 'Bom' : health >= 50 ? 'Atencao' : 'Critico'}</div>
+                </div>
+            `;
+        }
+
+        function renderHealthBar(s) {
+            document.getElementById('healthSection').style.display = 'block';
+            const pct = s.health_percentage.toFixed(1);
+            document.getElementById('healthPercent').textContent = `${pct}%`;
+            const fill = document.getElementById('healthFill');
+            fill.style.width = `${pct}%`;
+            fill.style.background = pct >= 80
+                ? 'linear-gradient(90deg, #22c55e, #4ade80)'
+                : pct >= 50
+                    ? 'linear-gradient(90deg, #eab308, #facc15)'
+                    : 'linear-gradient(90deg, #ef4444, #f87171)';
+        }
+
+        function renderStockChart(stock) {
+            const items = (stock.items || []).slice(0, 15);
+            const labels = items.map(i => i.sku.length > 12 ? i.sku.slice(0, 12) + '...' : i.sku);
+
+            if (stockChartInstance) stockChartInstance.destroy();
+            stockChartInstance = new Chart(document.getElementById('stockChart'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Bling', data: items.map(i => i.stock_bling), backgroundColor: '#8B8C4A', borderRadius: 4 },
+                        { label: 'Mercado Livre', data: items.map(i => i.stock_ml), backgroundColor: '#facc15', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+                    scales: {
+                        x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } },
+                        y: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+        }
+
+        function renderDivergenceChart(s) {
+            if (divergenceChartInstance) divergenceChartInstance.destroy();
+            divergenceChartInstance = new Chart(document.getElementById('divergenceChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Produtos Divergentes', 'Pedidos Divergentes', 'Estoque Divergente', 'Sincronizado'],
+                    datasets: [{
+                        data: [s.products_divergent, s.orders_divergent, s.stock_divergent,
+                               s.products_synced + s.orders_synced + s.stock_synced],
+                        backgroundColor: ['#f87171', '#fbbf24', '#c084fc', '#4ade80'],
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '60%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, padding: 15 } }
+                    }
+                }
+            });
+        }
+
+        function renderPendingSync(products, stock) {
+            const missingMl = (products.divergences || []).filter(d => d.field === 'missing' && d.value_ml === '-');
+            const missingBling = (products.divergences || []).filter(d => d.field === 'missing' && d.value_bling === '-');
+            const priceDiffs = (products.divergences || []).filter(d => d.field === 'price');
+            const stockDiffs = (stock.items || []).filter(i => i.difference !== 0);
+
+            const totalPending = missingMl.length + missingBling.length + priceDiffs.length + stockDiffs.length;
+            document.getElementById('pendingCount').textContent = totalPending;
+
+            // Missing in ML
+            document.getElementById('missingMlBody').innerHTML = missingMl.length === 0
+                ? '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:2rem;">Todos os produtos do Bling estao no ML</td></tr>'
+                : missingMl.map(d => `
+                    <tr>
+                        <td><strong>${d.sku}</strong></td>
+                        <td>${d.name}</td>
+                        <td>${d.value_bling}</td>
+                        <td>-</td>
+                        <td><span class="badge badge-error">Criar no ML</span></td>
+                    </tr>
+                `).join('');
+
+            // Missing in Bling
+            document.getElementById('missingBlingBody').innerHTML = missingBling.length === 0
+                ? '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:2rem;">Todos os anuncios do ML estao no Bling</td></tr>'
+                : missingBling.map(d => `
+                    <tr>
+                        <td><strong>${d.sku}</strong></td>
+                        <td>${d.name}</td>
+                        <td>${d.value_ml}</td>
+                        <td>-</td>
+                        <td><span class="badge badge-error">Criar no Bling</span></td>
+                    </tr>
+                `).join('');
+
+            // Price differences
+            document.getElementById('priceDiffBody').innerHTML = priceDiffs.length === 0
+                ? '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:2rem;">Precos sincronizados</td></tr>'
+                : priceDiffs.map(d => {
+                    const blingPrice = parseFloat(d.value_bling.replace('R$ ', '')) || 0;
+                    const mlPrice = parseFloat(d.value_ml.replace('R$ ', '')) || 0;
+                    const diff = (blingPrice - mlPrice).toFixed(2);
+                    return `
+                        <tr>
+                            <td><strong>${d.sku}</strong></td>
+                            <td>${d.name}</td>
+                            <td>${d.value_bling}</td>
+                            <td>${d.value_ml}</td>
+                            <td style="color: ${diff > 0 ? '#4ade80' : '#f87171'}">R$ ${diff > 0 ? '+' : ''}${diff}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            // Stock differences
+            document.getElementById('stockDiffBody').innerHTML = stockDiffs.length === 0
+                ? '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:2rem;">Estoque sincronizado</td></tr>'
+                : stockDiffs.map(i => `
+                    <tr>
+                        <td><strong>${i.sku}</strong></td>
+                        <td>${i.name}</td>
+                        <td>${i.stock_bling}</td>
+                        <td>${i.stock_ml}</td>
+                        <td style="color: ${i.difference > 0 ? '#4ade80' : '#f87171'}">${i.difference > 0 ? '+' : ''}${i.difference}</td>
+                    </tr>
+                `).join('');
+        }
+
+        function switchPendingTab(tab) {
+            document.querySelectorAll('[data-ptab]').forEach(b => b.classList.remove('active'));
+            document.querySelector(`[data-ptab="${tab}"]`).classList.add('active');
+            ['missing-ml', 'missing-bling', 'price-diff', 'stock-diff'].forEach(t => {
+                document.getElementById(`ptab-${t}`).style.display = t === tab ? '' : 'none';
+            });
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            ['products', 'orders', 'stock'].forEach(t => {
+                document.getElementById(`tab-${t}`).style.display = t === tab ? '' : 'none';
+            });
+        }
+
+        function badgeHTML(severity) {
+            const labels = { error: 'Erro', warning: 'Aviso', info: 'Info' };
+            return `<span class="badge badge-${severity}">${labels[severity] || severity}</span>`;
+        }
+
+        function renderTables() {
+            const filter = document.getElementById('severityFilter').value;
+
+            if (allData.products) {
+                const rows = allData.products.divergences.filter(d => filter === 'all' || d.severity === filter);
+                document.getElementById('productsTableBody').innerHTML = rows.length === 0
+                    ? '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:2rem;">Nenhuma divergencia encontrada</td></tr>'
+                    : rows.map(d => `
+                        <tr>
+                            <td><strong>${d.sku}</strong></td>
+                            <td>${d.name}</td>
+                            <td>${d.field}</td>
+                            <td>${d.value_bling}</td>
+                            <td>${d.value_ml}</td>
+                            <td>${badgeHTML(d.severity)}</td>
+                        </tr>
+                    `).join('');
+            }
+
+            if (allData.orders) {
+                const rows = allData.orders.divergences.filter(d => filter === 'all' || d.severity === filter);
+                document.getElementById('ordersTableBody').innerHTML = rows.length === 0
+                    ? '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:2rem;">Nenhuma divergencia encontrada</td></tr>'
+                    : rows.map(d => `
+                        <tr>
+                            <td><strong>${d.order_id}</strong></td>
+                            <td>${d.date}</td>
+                            <td>${d.field}</td>
+                            <td>${d.value_bling}</td>
+                            <td>${d.value_ml}</td>
+                            <td>${badgeHTML(d.severity)}</td>
+                        </tr>
+                    `).join('');
+            }
+
+            if (allData.stock) {
+                const items = allData.stock.items.filter(i => i.difference !== 0);
+                document.getElementById('stockTableBody').innerHTML = items.length === 0
+                    ? '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:2rem;">Estoque sincronizado</td></tr>'
+                    : items.map(i => `
+                        <tr>
+                            <td><strong>${i.sku}</strong></td>
+                            <td>${i.name}</td>
+                            <td>${i.stock_bling}</td>
+                            <td>${i.stock_ml}</td>
+                            <td style="color: ${i.difference > 0 ? '#4ade80' : '#f87171'}">${i.difference > 0 ? '+' : ''}${i.difference}</td>
+                        </tr>
+                    `).join('');
+            }
+        }
+
+        loadAll();
+    </script>
+</body>
+</html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bling - Resumo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid #334155;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-brand { display: flex; align-items: center; gap: 0.75rem; }
+        .header-logo { width: 36px; height: 36px; filter: hue-rotate(35deg) saturate(1.2); }
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #8B8C4A, #B5C47E);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-actions { display: flex; gap: 1rem; align-items: center; }
+        nav { display: flex; gap: 0.5rem; }
+        nav a {
+            color: #94a3b8;
+            text-decoration: none;
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.85rem;
+            border: 1px solid #334155;
+            transition: all 0.2s;
+        }
+        nav a:hover { border-color: #B5C47E; color: #B5C47E; }
+        nav a.active { background: #8B8C4A; color: white; border-color: #8B8C4A; }
+        .btn {
+            background: #93A25C; color: white; border: none;
+            padding: 0.5rem 1.25rem; border-radius: 0.5rem;
+            cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: background 0.2s;
+        }
+        .btn:hover { background: #6B7A3D; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .export-opt {
+            display: block; width: 100%; text-align: left; padding: 0.6rem 0.75rem;
+            background: none; border: none; color: #e2e8f0; font-size: 0.8rem;
+            cursor: pointer; border-bottom: 1px solid #0f172a; transition: background 0.15s;
+        }
+        .export-opt:hover { background: #334155; }
+        .export-opt:disabled { opacity: 0.5; cursor: wait; }
+        .last-update { color: #64748b; font-size: 0.8rem; }
+        .container { padding: 1.5rem 2rem; max-width: 1400px; margin: 0 auto; }
+        .filters {
+            display: flex; gap: 1rem; margin-bottom: 1.5rem;
+            flex-wrap: wrap; align-items: center;
+        }
+        .filter-group { display: flex; align-items: center; gap: 0.5rem; }
+        .filter-group label { font-size: 0.8rem; color: #94a3b8; }
+        .filter-group input {
+            background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
+            padding: 0.4rem 0.75rem; border-radius: 0.375rem; font-size: 0.8rem;
+        }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .card {
+            background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem;
+            padding: 1.25rem; position: relative; overflow: hidden;
+        }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; }
+        .card.blue::before { background: #8B8C4A; }
+        .card.green::before { background: #22c55e; }
+        .card.yellow::before { background: #eab308; }
+        .card.red::before { background: #ef4444; }
+        .card.purple::before { background: #a855f7; }
+        .card-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+        .card-value { font-size: 2rem; font-weight: 700; }
+        .card-sub { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
+        .card.blue .card-value { color: #B5C47E; }
+        .card.green .card-value { color: #4ade80; }
+        .card.yellow .card-value { color: #facc15; }
+        .card.red .card-value { color: #f87171; }
+        .card.purple .card-value { color: #c084fc; }
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        .chart-card {
+            background: #1e293b; border: 1px solid #334155;
+            border-radius: 0.75rem; padding: 1.25rem;
+        }
+        .chart-card h3 { font-size: 0.95rem; margin-bottom: 1rem; color: #cbd5e1; }
+        .chart-wrapper { position: relative; height: 280px; }
+        .table-section {
+            background: #1e293b; border: 1px solid #334155;
+            border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1.5rem;
+        }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .table-header h3 { font-size: 0.95rem; color: #cbd5e1; }
+        .tab-buttons { display: flex; gap: 0.5rem; }
+        .tab-btn {
+            background: #0f172a; border: 1px solid #334155; color: #94a3b8;
+            padding: 0.35rem 0.75rem; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem;
+        }
+        .tab-btn.active { background: #8B8C4A; color: white; border-color: #8B8C4A; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 0.6rem 0.75rem; font-size: 0.7rem;
+            color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #334155;
+        }
+        td { padding: 0.6rem 0.75rem; font-size: 0.8rem; border-bottom: 1px solid #1e293b; }
+        tr:hover { background: #0f172a44; }
+        .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; }
+        .badge-high { background: #7f1d1d; color: #fca5a5; }
+        .badge-medium { background: #713f12; color: #fde047; }
+        .badge-low { background: #2d3a1f; color: #C8D9A0; }
+        .badge-active { background: #14532d; color: #86efac; }
+        .badge-inactive { background: #44403c; color: #a8a29e; }
+        .loading { display: flex; align-items: center; justify-content: center; padding: 3rem; color: #64748b; }
+        .spinner {
+            width: 24px; height: 24px; border: 3px solid #334155; border-top-color: #8B8C4A;
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 0.75rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-msg {
+            background: #7f1d1d33; border: 1px solid #7f1d1d; color: #fca5a5;
+            padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.85rem;
+        }
+        .status-ok { color: #4ade80; }
+        .status-warn { color: #facc15; }
+        .status-err { color: #f87171; }
+        @media (max-width: 768px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .cards { grid-template-columns: repeat(2, 1fr); }
+            .container { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-brand">
+            <img class="header-logo" src="{{ BASE }}/static/logo.png" alt="Logo">
+            <h1>Bling ERP ZANON</h1>
+        </div>
+        <div class="header-actions">
+            <nav>
+                <a href="{{ BASE }}/bling" class="active">Bling</a>
+                <a href="{{ BASE }}/ml">Mercado Livre</a>
+                <a href="{{ BASE }}/">Consolidado</a>
+            </nav>
+            <span class="last-update" id="lastUpdate"></span>
+            <div style="position:relative;display:inline-block;" id="exportDropdown">
+                <button class="btn" style="background:#334155;" onclick="toggleExportMenu()">&#128202; Exportar Produtos &#9662;</button>
+                <div id="exportMenu" style="display:none;position:absolute;right:0;top:100%;margin-top:0.25rem;background:#1e293b;border:1px solid #334155;border-radius:0.5rem;min-width:240px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.4);overflow:hidden;">
+                    <div style="padding:0.5rem 0.75rem;font-size:0.7rem;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #334155;">Filtrar por canal</div>
+                    <button class="export-opt" onclick="doExport('all', this)">Todos os Produtos</button>
+                    <div id="exportCanais" style="border-top:1px solid #0f172a;"></div>
+                </div>
+            </div>
+            <button class="btn" id="refreshBtn" onclick="loadAll()">Atualizar</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="filters">
+            <div class="filter-group">
+                <label>De:</label>
+                <input type="date" id="dateFrom">
+            </div>
+            <div class="filter-group">
+                <label>Ate:</label>
+                <input type="date" id="dateTo">
+            </div>
+        </div>
+
+        <div id="errorContainer"></div>
+
+        <div class="cards" id="summaryCards">
+            <div class="loading"><div class="spinner"></div>Carregando resumo...</div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>Estoque por Produto (Top 15)</h3>
+                <div class="chart-wrapper"><canvas id="stockChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>Status dos Pedidos</h3>
+                <div class="chart-wrapper"><canvas id="ordersChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-header">
+                <h3>Dados do Bling</h3>
+                <div class="tab-buttons">
+                    <button class="tab-btn active" data-tab="orders" onclick="switchTab('orders')">Pedidos</button>
+                    <a href="{{ BASE }}/bling/pedidos" class="tab-btn" style="text-decoration:none;display:inline-block;">Todos os Pedidos &rsaquo;</a>
+                    <button class="tab-btn" data-tab="products" onclick="switchTab('products')">Produtos</button>
+                </div>
+            </div>
+
+            <div id="tab-products" style="display:none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Produto</th>
+                            <th>Preco</th>
+                            <th>Estoque</th>
+                            <th>ID Externo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsTableBody">
+                        <tr><td colspan="5"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="tab-orders">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Pedido</th>
+                            <th>Data</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Itens</th>
+                            <th>Comprador</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                        <tr><td colspan="6"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stockChartInstance = null;
+        let ordersChartInstance = null;
+
+        const today = new Date();
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+        document.getElementById('dateFrom').value = weekAgo.toISOString().split('T')[0];
+
+        function showError(msg) {
+            document.getElementById('errorContainer').innerHTML = `<div class="error-msg">${msg}</div>`;
+        }
+
+        async function fetchAPI(endpoint) {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+            const resp = await fetch(`{{ BASE }}/api/bling/${endpoint}?${params}`);
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                if (resp.status === 401) {
+                    throw new Error(err.detail || 'Bling nao autorizado. <a href="{{ BASE }}/bling/auth" style="color:#B5C47E">Clique aqui para autorizar</a>.');
+                }
+                throw new Error(err.detail || `Erro ao carregar ${endpoint}`);
+            }
+            return resp.json();
+        }
+
+        function toggleExportMenu() {
+            const menu = document.getElementById('exportMenu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+        document.addEventListener('click', (e) => {
+            const dd = document.getElementById('exportDropdown');
+            if (dd && !dd.contains(e.target)) document.getElementById('exportMenu').style.display = 'none';
+        });
+
+        // Load canais on first open
+        let canaisLoaded = false;
+        async function loadCanais() {
+            if (canaisLoaded) return;
+            canaisLoaded = true;
+            try {
+                const resp = await fetch('{{ BASE }}/api/bling/canais-venda');
+                if (!resp.ok) return;
+                const canais = await resp.json();
+                const container = document.getElementById('exportCanais');
+                for (const c of canais) {
+                    const btn = document.createElement('button');
+                    btn.className = 'export-opt';
+                    btn.textContent = c.descricao + ' (' + c.tipo + ')';
+                    btn.onclick = () => doExport(c.id, btn);
+                    container.appendChild(btn);
+                }
+            } catch (e) {}
+        }
+        // Load canais when dropdown opens
+        const origToggle = toggleExportMenu;
+        toggleExportMenu = function() { loadCanais(); origToggle(); };
+
+        async function doExport(canal, btn) {
+            const origText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Gerando...';
+            try {
+                const url = canal === 'all' ? '{{ BASE }}/api/bling/produtos/export' : `{{ BASE }}/api/bling/produtos/export?canal=${canal}`;
+                const resp = await fetch(url);
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Erro ao exportar');
+                }
+                const blob = await resp.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = resp.headers.get('content-disposition')?.split('filename=')[1] || 'produtos_bling.xlsx';
+                a.click();
+                URL.revokeObjectURL(blobUrl);
+                document.getElementById('exportMenu').style.display = 'none';
+            } catch (err) {
+                alert('Erro: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        }
+
+        async function loadAll() {
+            document.getElementById('errorContainer').innerHTML = '';
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            btn.textContent = 'Carregando...';
+
+            try {
+                const data = await fetchAPI('summary');
+                renderSummaryCards(data);
+                renderStockChart(data.products);
+                renderOrdersChart(data.orders);
+                renderProductsTable(data.products);
+                renderOrdersTable(data.orders);
+
+                document.getElementById('lastUpdate').textContent =
+                    `Atualizado: ${new Date().toLocaleString('pt-BR')}`;
+            } catch (err) {
+                showError(`Falha ao carregar dados: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Atualizar';
+            }
+        }
+
+        function renderSummaryCards(data) {
+            const p = data.products;
+            const o = data.orders;
+            const totalRevenue = o.reduce((sum, ord) => sum + ord.total, 0);
+            const avgPrice = p.length > 0 ? p.reduce((sum, pr) => sum + pr.price, 0) / p.length : 0;
+            const totalStock = p.reduce((sum, pr) => sum + pr.stock, 0);
+            const zeroStock = p.filter(pr => pr.stock === 0).length;
+
+            document.getElementById('summaryCards').innerHTML = `
+                <div class="card blue">
+                    <div class="card-label">Total Produtos</div>
+                    <div class="card-value">${p.length}</div>
+                    <div class="card-sub">cadastrados no Bling</div>
+                </div>
+                <div class="card green">
+                    <div class="card-label">Estoque Total</div>
+                    <div class="card-value">${totalStock.toLocaleString('pt-BR')}</div>
+                    <div class="card-sub">${zeroStock} produtos sem estoque</div>
+                </div>
+                <div class="card purple">
+                    <div class="card-label">Preco Medio</div>
+                    <div class="card-value">R$ ${avgPrice.toFixed(2)}</div>
+                    <div class="card-sub">por produto</div>
+                </div>
+                <div class="card yellow">
+                    <div class="card-label">Total Pedidos</div>
+                    <div class="card-value">${o.length}</div>
+                    <div class="card-sub">no periodo selecionado</div>
+                </div>
+                <div class="card green">
+                    <div class="card-label">Receita Total</div>
+                    <div class="card-value">R$ ${totalRevenue.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                    <div class="card-sub">no periodo selecionado</div>
+                </div>
+                <div class="card ${zeroStock > 0 ? 'red' : 'green'}">
+                    <div class="card-label">Sem Estoque</div>
+                    <div class="card-value">${zeroStock}</div>
+                    <div class="card-sub">${zeroStock > 0 ? 'produtos precisam reposicao' : 'tudo em estoque'}</div>
+                </div>
+            `;
+        }
+
+        function renderStockChart(products) {
+            const sorted = [...products].sort((a, b) => b.stock - a.stock).slice(0, 15);
+            const labels = sorted.map(p => p.sku.length > 12 ? p.sku.slice(0, 12) + '...' : (p.sku || p.name.slice(0, 12)));
+
+            if (stockChartInstance) stockChartInstance.destroy();
+            stockChartInstance = new Chart(document.getElementById('stockChart'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Estoque',
+                        data: sorted.map(p => p.stock),
+                        backgroundColor: '#8B8C4A',
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } },
+                        y: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } }
+                    }
+                }
+            });
+        }
+
+        function renderOrdersChart(orders) {
+            const statusCount = {};
+            orders.forEach(o => {
+                const s = o.status || 'desconhecido';
+                statusCount[s] = (statusCount[s] || 0) + 1;
+            });
+            const labels = Object.keys(statusCount);
+            const colors = ['#8B8C4A', '#4ade80', '#facc15', '#f87171', '#c084fc', '#fb923c', '#67e8f9'];
+
+            if (ordersChartInstance) ordersChartInstance.destroy();
+            ordersChartInstance = new Chart(document.getElementById('ordersChart'), {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: Object.values(statusCount),
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '60%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, padding: 15 } }
+                    }
+                }
+            });
+        }
+
+        function renderProductsTable(products) {
+            document.getElementById('productsTableBody').innerHTML = products.length === 0
+                ? '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:2rem;">Nenhum produto encontrado</td></tr>'
+                : products.map(p => `
+                    <tr>
+                        <td><strong>${p.sku || '-'}</strong></td>
+                        <td>${p.name}</td>
+                        <td>R$ ${p.price.toFixed(2)}</td>
+                        <td style="color: ${p.stock === 0 ? '#f87171' : '#4ade80'}">${p.stock}</td>
+                        <td style="color:#64748b">${p.external_id}</td>
+                    </tr>
+                `).join('');
+        }
+
+        function renderOrdersTable(orders) {
+            document.getElementById('ordersTableBody').innerHTML = orders.length === 0
+                ? '<tr><td colspan="6" style="text-align:center;color:#64748b;padding:2rem;">Nenhum pedido encontrado</td></tr>'
+                : orders.map(o => `
+                    <tr>
+                        <td><strong>${o.order_id}</strong></td>
+                        <td>${new Date(o.date).toLocaleDateString('pt-BR')}</td>
+                        <td>R$ ${o.total.toFixed(2)}</td>
+                        <td>${o.status}</td>
+                        <td>${o.items_count}</td>
+                        <td>${o.buyer}</td>
+                    </tr>
+                `).join('');
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            ['products', 'orders'].forEach(t => {
+                document.getElementById(`tab-${t}`).style.display = t === tab ? '' : 'none';
+            });
+        }
+
+        loadAll();
+    </script>
+</body>
+</html>

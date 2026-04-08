@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bling - Pedidos</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a; color: #e2e8f0; min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid #334155; padding: 1.5rem 2rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-brand { display: flex; align-items: center; gap: 0.75rem; }
+        .header-logo { width: 36px; height: 36px; filter: hue-rotate(35deg) saturate(1.2); }
+        .header h1 {
+            font-size: 1.5rem; font-weight: 700;
+            background: linear-gradient(135deg, #8B8C4A, #B5C47E);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .header-actions { display: flex; gap: 1rem; align-items: center; }
+        nav { display: flex; gap: 0.5rem; }
+        nav a {
+            color: #94a3b8; text-decoration: none; padding: 0.4rem 0.75rem;
+            border-radius: 0.375rem; font-size: 0.85rem; border: 1px solid #334155; transition: all 0.2s;
+        }
+        nav a:hover { border-color: #B5C47E; color: #B5C47E; }
+        nav a.active { background: #8B8C4A; color: white; border-color: #8B8C4A; }
+        .btn {
+            background: #93A25C; color: white; border: none;
+            padding: 0.5rem 1.25rem; border-radius: 0.5rem;
+            cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: background 0.2s;
+        }
+        .btn:hover { background: #6B7A3D; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .last-update { color: #64748b; font-size: 0.8rem; }
+        .container { padding: 1.5rem 2rem; max-width: 1400px; margin: 0 auto; }
+        .filters {
+            display: flex; gap: 1rem; margin-bottom: 1.5rem;
+            flex-wrap: wrap; align-items: center;
+        }
+        .filter-group { display: flex; align-items: center; gap: 0.5rem; }
+        .filter-group label { font-size: 0.8rem; color: #94a3b8; }
+        .filter-group input, .filter-group select {
+            background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
+            padding: 0.4rem 0.75rem; border-radius: 0.375rem; font-size: 0.8rem;
+        }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .card {
+            background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem;
+            padding: 1.25rem; position: relative; overflow: hidden;
+        }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; }
+        .card.blue::before { background: #8B8C4A; }
+        .card.green::before { background: #22c55e; }
+        .card.yellow::before { background: #eab308; }
+        .card.purple::before { background: #a855f7; }
+        .card-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+        .card-value { font-size: 2rem; font-weight: 700; }
+        .card-sub { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
+        .card.blue .card-value { color: #B5C47E; }
+        .card.green .card-value { color: #4ade80; }
+        .card.yellow .card-value { color: #facc15; }
+        .card.purple .card-value { color: #c084fc; }
+        .table-section {
+            background: #1e293b; border: 1px solid #334155;
+            border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1.5rem;
+        }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .table-header h3 { font-size: 0.95rem; color: #cbd5e1; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 0.6rem 0.75rem; font-size: 0.7rem;
+            color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #334155;
+        }
+        th.sortable {
+            cursor: pointer; user-select: none; transition: color 0.2s;
+        }
+        th.sortable:hover { color: #B5C47E; }
+        th.sortable::after {
+            content: ' \2195'; opacity: 0.3; font-size: 0.65rem;
+        }
+        th.sort-asc::after { content: ' \2191'; opacity: 1; color: #B5C47E; }
+        th.sort-desc::after { content: ' \2193'; opacity: 1; color: #B5C47E; }
+        td { padding: 0.6rem 0.75rem; font-size: 0.8rem; border-bottom: 1px solid #0f172a; }
+        tr:hover { background: #0f172a88; }
+        tr.clickable { cursor: pointer; }
+        tr.clickable:hover { background: #2d3a1f; }
+        .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; }
+        .badge-green { background: #14532d; color: #86efac; }
+        .badge-yellow { background: #713f12; color: #fde047; }
+        .badge-red { background: #7f1d1d; color: #fca5a5; }
+        .badge-blue { background: #2d3a1f; color: #C8D9A0; }
+        .badge-gray { background: #334155; color: #94a3b8; }
+        .sefaz-link {
+            font-size: 0.65rem; color: #B5C47E; text-decoration: none; cursor: pointer;
+            border: 1px solid #334155; padding: 0.1rem 0.35rem; border-radius: 0.25rem;
+            margin-left: 0.25rem; white-space: nowrap; transition: all 0.2s;
+        }
+        .sefaz-link:hover { background: #2d3a1f; border-color: #B5C47E; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal {
+            background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem;
+            padding: 1.5rem; max-width: 560px; width: 90%; position: relative;
+        }
+        .modal-title {
+            font-size: 1rem; font-weight: 700; color: #e2e8f0; margin-bottom: 1rem;
+            padding-bottom: 0.75rem; border-bottom: 1px solid #334155;
+        }
+        .modal-close {
+            position: absolute; top: 1rem; right: 1rem; background: none; border: none;
+            color: #64748b; font-size: 1.2rem; cursor: pointer;
+        }
+        .modal-close:hover { color: #e2e8f0; }
+        .modal-field { margin-bottom: 0.75rem; }
+        .modal-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+        .modal-value {
+            background: #0f172a; border: 1px solid #334155; border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem; font-size: 0.8rem; color: #e2e8f0;
+            font-family: monospace; word-break: break-all; display: flex;
+            justify-content: space-between; align-items: center; gap: 0.5rem;
+        }
+        .modal-value span { flex: 1; }
+        .copy-btn {
+            background: #334155; border: none; color: #94a3b8; padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem; cursor: pointer; font-size: 0.7rem; white-space: nowrap;
+        }
+        .copy-btn:hover { background: #475569; color: #e2e8f0; }
+        .copy-btn.copied { background: #14532d; color: #86efac; }
+        .modal-actions { margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end; }
+        .modal-actions a, .modal-actions button {
+            padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.8rem;
+            font-weight: 600; text-decoration: none; cursor: pointer; border: none;
+        }
+        .btn-sefaz-go { background: #6B7A3D; color: white; }
+        .btn-sefaz-go:hover { background: #1d4ed8; }
+        .btn-modal-close { background: #334155; color: #94a3b8; }
+        .btn-modal-close:hover { background: #475569; color: #e2e8f0; }
+        .loading { display: flex; align-items: center; justify-content: center; padding: 3rem; color: #64748b; }
+        .spinner {
+            width: 24px; height: 24px; border: 3px solid #334155; border-top-color: #8B8C4A;
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 0.75rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-msg {
+            background: #7f1d1d33; border: 1px solid #7f1d1d; color: #fca5a5;
+            padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.85rem;
+        }
+        .breadcrumb { font-size: 0.8rem; color: #64748b; margin-bottom: 1rem; }
+        .breadcrumb a { color: #B5C47E; text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        @media (max-width: 768px) {
+            .cards { grid-template-columns: repeat(2, 1fr); }
+            .container { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-brand">
+            <img class="header-logo" src="{{ BASE }}/static/logo.png" alt="Logo">
+            <h1>Bling - Pedidos</h1>
+        </div>
+        <div class="header-actions">
+            <nav>
+                <a href="{{ BASE }}/bling">Bling</a>
+                <a href="{{ BASE }}/ml">Mercado Livre</a>
+                <a href="{{ BASE }}/">Consolidado</a>
+            </nav>
+            <span class="last-update" id="lastUpdate"></span>
+            <button class="btn" id="refreshBtn" onclick="loadOrders()">Atualizar</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="{{ BASE }}/bling">Bling</a> &rsaquo; Pedidos
+        </div>
+
+        <div class="filters">
+            <div class="filter-group">
+                <label>De:</label>
+                <input type="date" id="dateFrom">
+            </div>
+            <div class="filter-group">
+                <label>Ate:</label>
+                <input type="date" id="dateTo">
+            </div>
+            <div class="filter-group">
+                <label>Buscar:</label>
+                <input type="text" id="searchInput" placeholder="Pedido, cliente..." oninput="filterTable()">
+            </div>
+        </div>
+
+        <div id="errorContainer"></div>
+
+        <div class="cards" id="summaryCards">
+            <div class="loading"><div class="spinner"></div>Carregando...</div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-header">
+                <h3>Pedidos de Venda</h3>
+                <span id="orderCount" style="font-size:0.8rem;color:#64748b;"></span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="sortable sort-desc" data-sort="numero" onclick="sortBy('numero')">Pedido</th>
+                        <th class="sortable" data-sort="numeroLoja" onclick="sortBy('numeroLoja')">N. Loja</th>
+                        <th class="sortable" data-sort="data" onclick="sortBy('data')">Data</th>
+                        <th class="sortable" data-sort="cliente" onclick="sortBy('cliente')">Cliente</th>
+                        <th class="sortable" data-sort="total" onclick="sortBy('total')">Total</th>
+                        <th class="sortable" data-sort="status" onclick="sortBy('status')">Status</th>
+                        <th class="sortable" data-sort="nfe" onclick="sortBy('nfe')">Nota Fiscal</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    <tr><td colspan="7"><div class="loading"><div class="spinner"></div>Carregando pedidos...</div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let allOrders = [];
+        let filteredOrders = [];
+        let currentSort = { key: 'numero', dir: 'desc' };
+
+        const today = new Date();
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 30);
+        document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+        document.getElementById('dateFrom').value = weekAgo.toISOString().split('T')[0];
+
+        function nfeBadge(nfe) {
+            if (!nfe) return '<span class="badge badge-gray">Sem NF</span>';
+            const sit = nfe.situacao;
+            const num = nfe.numero || '';
+            const chave = nfe.chaveAcesso || '';
+            const map = {
+                1: ['Pendente', 'yellow'],
+                2: ['Rejeitada', 'red'],
+                3: ['Denegada', 'red'],
+                4: ['Cancelada', 'red'],
+                5: ['Autorizada', 'green'],
+                6: ['Inutilizada', 'gray'],
+            };
+            const [label, color] = map[sit] || [String(sit), 'gray'];
+            let badge = `<span class="badge badge-${color}">#${num} ${label}</span>`;
+
+            const nfeJson = encodeURIComponent(JSON.stringify(nfe));
+            badge += ` <span class="sefaz-link" onclick="event.stopPropagation(); openSefazModal(decodeURIComponent('${nfeJson}'))">SEFAZ &#8599;</span>`;
+
+            return badge;
+        }
+
+        function openSefazModal(nfeData) {
+            const nfe = typeof nfeData === 'string' ? JSON.parse(nfeData) : nfeData;
+            const sit = nfe.situacao;
+            const num = nfe.numero || '-';
+            const chave = nfe.chaveAcesso || '';
+            const sitLabels = {1:'Pendente',2:'Rejeitada',3:'Denegada',4:'Cancelada',5:'Autorizada',6:'Inutilizada'};
+            const sitLabel = sitLabels[sit] || sit;
+            const sefazUrl = chave
+                ? 'https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa&tipoConteudo=XbSeqxE8pl8=&nfe=' + chave
+                : '';
+
+            // Find order data for this nfe
+            const order = allOrders.find(o => o.nfe && o.nfe.id === nfe.id);
+            const cliente = order?.contato?.nome || '-';
+            const pedido = order ? '#' + order.numero : '-';
+
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+            overlay.innerHTML = `
+                <div class="modal">
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+                    <div class="modal-title">Consulta NFe na SEFAZ</div>
+
+                    <div class="modal-field">
+                        <div class="modal-label">Nota Fiscal</div>
+                        <div class="modal-value"><span>#${num} - ${sitLabel}</span></div>
+                    </div>
+
+                    <div class="modal-field">
+                        <div class="modal-label">Pedido / Cliente</div>
+                        <div class="modal-value"><span>${pedido} - ${cliente}</span></div>
+                    </div>
+
+                    <div class="modal-field">
+                        <div class="modal-label">Chave de Acesso (44 digitos)</div>
+                        <div class="modal-value">
+                            <span>${chave || 'Aguardando geracao pela SEFAZ...'}</span>
+                            ${chave ? '<button class="copy-btn" onclick="copyChave(this, \'' + chave + '\')">Copiar</button>' : ''}
+                        </div>
+                    </div>
+
+                    ${chave ? `
+                    <div class="modal-field">
+                        <div class="modal-label">Link de Consulta na SEFAZ</div>
+                        <div class="modal-value" style="font-size:0.65rem;">
+                            <span><a href="${sefazUrl}" target="_blank" style="color:#B5C47E;word-break:break-all;">${sefazUrl}</a></span>
+                            <button class="copy-btn" onclick="copyChave(this, '${sefazUrl}')">Copiar</button>
+                        </div>
+                    </div>
+                    ` : `
+                    <div class="modal-field">
+                        <div class="modal-label">Link de Consulta na SEFAZ</div>
+                        <div class="modal-value"><span style="color:#64748b;">Disponivel apos autorizacao da SEFAZ</span></div>
+                    </div>
+                    `}
+
+                    <div class="modal-actions">
+                        <button class="btn-modal-close" onclick="this.closest('.modal-overlay').remove()">Fechar</button>
+                        ${chave ? '<a class="btn-sefaz-go" href="' + sefazUrl + '" target="_blank">Consultar na SEFAZ &#8599;</a>' : ''}
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+        }
+
+        function copyChave(btn, chave) {
+            navigator.clipboard.writeText(chave);
+            btn.textContent = 'Copiado!';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+        }
+
+        function statusBadge(situacao) {
+            const valor = situacao?.valor ?? '';
+            const map = {
+                '0': ['Em aberto', 'blue'],
+                '1': ['Atendido', 'green'],
+                '2': ['Cancelado', 'red'],
+                '3': ['Em andamento', 'yellow'],
+                '4': ['Verificado', 'green'],
+                '6': ['Finalizado', 'green'],
+                '9': ['Em aberto', 'blue'],
+                '10': ['Atendido parcial', 'yellow'],
+                '11': ['Pendente', 'yellow'],
+                '12': ['Devolvido', 'red'],
+                '15': ['Em separacao', 'yellow'],
+            };
+            const [label, color] = map[String(valor)] || [String(valor), 'gray'];
+            return `<span class="badge badge-${color}">${label}</span>`;
+        }
+
+        async function loadOrders() {
+            document.getElementById('errorContainer').innerHTML = '';
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            btn.textContent = 'Carregando...';
+
+            try {
+                const dateFrom = document.getElementById('dateFrom').value;
+                const dateTo = document.getElementById('dateTo').value;
+                const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+                const resp = await fetch(`{{ BASE }}/api/bling/orders?${params}`);
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Erro ao carregar pedidos');
+                }
+                allOrders = await resp.json();
+                renderCards();
+                applyFilterAndSort();
+                document.getElementById('lastUpdate').textContent =
+                    `Atualizado: ${new Date().toLocaleString('pt-BR')}`;
+            } catch (err) {
+                document.getElementById('errorContainer').innerHTML =
+                    `<div class="error-msg">${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Atualizar';
+            }
+        }
+
+        function renderCards() {
+            const total = allOrders.reduce((s, o) => s + (o.total || 0), 0);
+            const ticketMedio = allOrders.length > 0 ? total / allOrders.length : 0;
+
+            const statusCount = {};
+            allOrders.forEach(o => {
+                const v = String(o.situacao?.valor ?? '?');
+                statusCount[v] = (statusCount[v] || 0) + 1;
+            });
+
+            document.getElementById('summaryCards').innerHTML = `
+                <div class="card blue">
+                    <div class="card-label">Total Pedidos</div>
+                    <div class="card-value">${allOrders.length}</div>
+                    <div class="card-sub">no periodo selecionado</div>
+                </div>
+                <div class="card green">
+                    <div class="card-label">Receita Total</div>
+                    <div class="card-value">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                    <div class="card-sub">soma dos pedidos</div>
+                </div>
+                <div class="card purple">
+                    <div class="card-label">Ticket Medio</div>
+                    <div class="card-value">R$ ${ticketMedio.toFixed(2)}</div>
+                    <div class="card-sub">por pedido</div>
+                </div>
+                <div class="card yellow">
+                    <div class="card-label">Clientes</div>
+                    <div class="card-value">${new Set(allOrders.map(o => o.contato?.nome)).size}</div>
+                    <div class="card-sub">unicos no periodo</div>
+                </div>
+            `;
+        }
+
+        function renderTable(orders) {
+            document.getElementById('orderCount').textContent = `${orders.length} pedido(s)`;
+            if (orders.length === 0) {
+                document.getElementById('ordersTableBody').innerHTML =
+                    '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:2rem;">Nenhum pedido encontrado</td></tr>';
+                return;
+            }
+            document.getElementById('ordersTableBody').innerHTML = orders.map(o => `
+                <tr class="clickable" onclick="window.location='{{ BASE }}/bling/pedidos/${o.id}'">
+                    <td><strong>#${o.numero}</strong></td>
+                    <td style="color:#64748b">${o.numeroLoja || '-'}</td>
+                    <td>${formatDate(o.data)}</td>
+                    <td>${o.contato?.nome || '-'}</td>
+                    <td>R$ ${(o.total || 0).toFixed(2)}</td>
+                    <td>${statusBadge(o.situacao)}</td>
+                    <td>${nfeBadge(o.nfe)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function formatDate(d) {
+            if (!d || d === '0000-00-00') return '-';
+            const [y, m, day] = d.split('-');
+            return `${day}/${m}/${y}`;
+        }
+
+        function getSortValue(o, key) {
+            switch (key) {
+                case 'numero': return o.numero || 0;
+                case 'numeroLoja': return (o.numeroLoja || '').toLowerCase();
+                case 'data': return o.data || '';
+                case 'cliente': return (o.contato?.nome || '').toLowerCase();
+                case 'total': return o.total || 0;
+                case 'status': return o.situacao?.valor ?? 0;
+                case 'nfe': return o.nfe?.situacao ?? -1;
+                default: return '';
+            }
+        }
+
+        function sortOrders(orders) {
+            const { key, dir } = currentSort;
+            return [...orders].sort((a, b) => {
+                let va = getSortValue(a, key);
+                let vb = getSortValue(b, key);
+                if (va < vb) return dir === 'asc' ? -1 : 1;
+                if (va > vb) return dir === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        function sortBy(key) {
+            if (currentSort.key === key) {
+                currentSort.dir = currentSort.dir === 'desc' ? 'asc' : 'desc';
+            } else {
+                currentSort.key = key;
+                currentSort.dir = 'desc';
+            }
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.sort === key) {
+                    th.classList.add(currentSort.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+            applyFilterAndSort();
+        }
+
+        function applyFilterAndSort() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            filteredOrders = allOrders;
+            if (q) {
+                filteredOrders = allOrders.filter(o =>
+                    String(o.numero).includes(q) ||
+                    (o.contato?.nome || '').toLowerCase().includes(q) ||
+                    (o.numeroLoja || '').toLowerCase().includes(q)
+                );
+            }
+            renderTable(sortOrders(filteredOrders));
+        }
+
+        function filterTable() {
+            applyFilterAndSort();
+        }
+
+        loadOrders();
+    </script>
+</body>
+</html>
