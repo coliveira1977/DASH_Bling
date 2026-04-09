@@ -143,44 +143,51 @@
         .btn-heatmap:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-heatmap svg { width: 14px; height: 14px; }
         .heatmap-container {
-            background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem;
+            background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem;
             padding: 1.25rem; margin-bottom: 1.5rem; display: none;
         }
         .heatmap-container.active { display: block; }
         .heatmap-header {
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
         }
-        .heatmap-header h3 { font-size: 0.9rem; color: #cbd5e1; }
+        .heatmap-header h3 { font-size: 0.95rem; color: #cbd5e1; }
         .heatmap-close {
             background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer;
         }
         .heatmap-close:hover { color: #e2e8f0; }
-        .heatmap-grid {
-            display: grid; gap: 2px;
-            grid-template-columns: 60px repeat(24, 1fr);
+        .heatmap-body { display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap; }
+        .heatmap-map { flex: 1; min-width: 300px; max-width: 600px; }
+        .heatmap-map svg { width: 100%; height: auto; }
+        .heatmap-map svg path {
+            stroke: #334155; stroke-width: 0.5; cursor: pointer; transition: all 0.2s;
         }
-        .heatmap-cell {
-            aspect-ratio: 1; border-radius: 3px; position: relative;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.6rem; color: transparent; transition: all 0.15s;
+        .heatmap-map svg path:hover { stroke: #e2e8f0; stroke-width: 1.5; filter: brightness(1.3); }
+        .heatmap-sidebar { flex: 0 0 280px; min-width: 220px; }
+        .heatmap-ranking { list-style: none; padding: 0; margin: 0; }
+        .heatmap-ranking li {
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0;
+            border-bottom: 1px solid #0f172a; font-size: 0.8rem;
         }
-        .heatmap-cell:hover { color: #e2e8f0; transform: scale(1.15); z-index: 1; }
-        .heatmap-label {
-            display: flex; align-items: center; font-size: 0.65rem; color: #94a3b8;
-            padding-right: 0.5rem; justify-content: flex-end;
-        }
-        .heatmap-hour-label {
-            display: flex; align-items: flex-end; justify-content: center;
-            font-size: 0.6rem; color: #64748b; padding-bottom: 0.25rem;
-        }
+        .heatmap-ranking li:last-child { border-bottom: none; }
+        .heatmap-rank { color: #64748b; font-size: 0.7rem; width: 1.5rem; text-align: right; }
+        .heatmap-uf { font-weight: 600; color: #e2e8f0; width: 2rem; }
+        .heatmap-bar-wrap { flex: 1; height: 6px; background: #0f172a; border-radius: 3px; overflow: hidden; }
+        .heatmap-bar { height: 100%; border-radius: 3px; transition: width 0.3s; }
+        .heatmap-count { color: #94a3b8; font-size: 0.75rem; width: 2.5rem; text-align: right; }
         .heatmap-legend {
             display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem;
-            justify-content: flex-end; font-size: 0.65rem; color: #64748b;
+            font-size: 0.65rem; color: #64748b;
         }
         .heatmap-legend-bar {
             display: flex; gap: 1px; border-radius: 3px; overflow: hidden;
         }
         .heatmap-legend-bar span { width: 16px; height: 10px; }
+        .heatmap-tooltip {
+            position: fixed; background: #0f172a; border: 1px solid #334155;
+            border-radius: 0.375rem; padding: 0.5rem 0.75rem; font-size: 0.75rem;
+            color: #e2e8f0; pointer-events: none; z-index: 1000; display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
         @media (max-width: 768px) {
             .charts-grid { grid-template-columns: 1fr; }
             .cards { grid-template-columns: repeat(2, 1fr); }
@@ -225,8 +232,8 @@
             </div>
             <button class="btn-heatmap" id="heatmapBtn" onclick="toggleHeatmap()" disabled>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
                 </svg>
                 Mapa de Calor
             </button>
@@ -234,16 +241,23 @@
 
         <div class="heatmap-container" id="heatmapContainer">
             <div class="heatmap-header">
-                <h3>Mapa de Calor - Pedidos por Dia e Hora</h3>
+                <h3>Mapa de Calor - Pedidos por Estado</h3>
                 <button class="heatmap-close" onclick="toggleHeatmap()">&times;</button>
             </div>
-            <div class="heatmap-grid" id="heatmapGrid"></div>
+            <div class="heatmap-body">
+                <div class="heatmap-map" id="heatmapMap"></div>
+                <div class="heatmap-sidebar">
+                    <div style="font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">Ranking por Estado</div>
+                    <ul class="heatmap-ranking" id="heatmapRanking"></ul>
+                </div>
+            </div>
             <div class="heatmap-legend">
                 <span>Menos</span>
                 <div class="heatmap-legend-bar" id="heatmapLegend"></div>
                 <span>Mais</span>
             </div>
         </div>
+        <div class="heatmap-tooltip" id="heatmapTooltip"></div>
 
         <div id="errorContainer"></div>
 
@@ -411,9 +425,11 @@
                 renderProductsTable(data.products);
                 renderOrdersTable(data.orders);
 
-                allOrdersForHeatmap = data.orders;
+                heatmapOrdersRaw = null;
                 document.getElementById('heatmapBtn').disabled = false;
-                if (document.getElementById('heatmapContainer').classList.contains('active')) renderHeatmap();
+                if (document.getElementById('heatmapContainer').classList.contains('active')) {
+                    loadHeatmapOrders().then(renderHeatmap);
+                }
 
                 document.getElementById('lastUpdate').textContent =
                     `Atualizado: ${new Date().toLocaleString('pt-BR')}`;
@@ -560,54 +576,129 @@
             });
         }
 
-        let allOrdersForHeatmap = [];
+        let heatmapOrdersRaw = null;
         const heatmapColors = ['#1e293b', '#1a2e1a', '#2d4a1f', '#3d6b1f', '#4d8c1f', '#6BAF1F', '#93A25C', '#B5C47E'];
+        const ufNames = {AC:'Acre',AL:'Alagoas',AP:'Amapa',AM:'Amazonas',BA:'Bahia',CE:'Ceara',DF:'Distrito Federal',ES:'Espirito Santo',GO:'Goias',MA:'Maranhao',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Para',PB:'Paraiba',PR:'Parana',PE:'Pernambuco',PI:'Piaui',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondonia',RR:'Roraima',SC:'Santa Catarina',SP:'Sao Paulo',SE:'Sergipe',TO:'Tocantins'};
 
-        function toggleHeatmap() {
+        // Simplified Brazil SVG paths per state
+        const brPaths = {
+AC:"M 100,340 L 115,340 120,355 105,360 95,355 Z",
+AL:"M 488,300 L 498,295 505,300 500,310 490,308 Z",
+AP:"M 370,160 L 385,145 400,155 395,175 375,175 Z",
+AM:"M 150,200 L 250,180 280,220 260,280 200,290 130,270 120,230 Z",
+BA:"M 430,280 L 490,270 505,300 500,350 480,380 440,370 420,330 Z",
+CE:"M 465,240 L 490,235 500,250 490,270 470,265 Z",
+DF:"M 380,330 L 390,325 395,335 385,340 Z",
+ES:"M 460,370 L 475,365 480,380 470,390 458,385 Z",
+GO:"M 360,310 L 400,300 415,330 400,365 370,360 350,340 Z",
+MA:"M 380,210 L 430,200 445,230 430,260 390,255 370,230 Z",
+MT:"M 260,280 L 340,270 360,310 350,370 300,380 260,350 Z",
+MS:"M 290,380 L 340,370 355,400 340,430 300,435 280,410 Z",
+MG:"M 400,330 L 450,320 470,355 460,395 420,400 395,375 Z",
+PA:"M 260,170 L 370,160 380,210 370,260 320,270 260,260 240,220 Z",
+PB:"M 480,270 L 500,265 508,275 498,282 482,278 Z",
+PR:"M 330,420 L 370,410 385,430 370,450 335,448 320,435 Z",
+PE:"M 465,275 L 500,270 510,285 495,295 468,290 Z",
+PI:"M 410,230 L 440,225 455,255 445,280 420,280 405,255 Z",
+RJ:"M 440,395 L 465,390 475,405 460,415 440,410 Z",
+RN:"M 485,250 L 505,245 510,260 498,265 485,260 Z",
+RS:"M 310,450 L 350,445 365,470 350,500 320,505 300,480 Z",
+RO:"M 180,290 L 240,280 260,310 240,340 200,340 175,315 Z",
+RR:"M 180,130 L 210,115 230,140 220,175 195,180 170,160 Z",
+SC:"M 345,440 L 375,435 385,450 370,465 348,460 Z",
+SP:"M 370,385 L 420,375 440,400 425,425 385,430 365,410 Z",
+SE:"M 485,295 L 498,290 503,300 495,308 485,305 Z",
+TO:"M 350,230 L 385,225 395,260 385,300 360,305 340,275 Z"
+        };
+
+        async function toggleHeatmap() {
             const container = document.getElementById('heatmapContainer');
             const isActive = container.classList.toggle('active');
-            if (isActive) renderHeatmap();
+            if (isActive) {
+                if (!heatmapOrdersRaw) await loadHeatmapOrders();
+                renderHeatmap();
+            }
+        }
+
+        async function loadHeatmapOrders() {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+            try {
+                const resp = await fetch(`{{ BASE }}/api/bling/orders?${params}`);
+                if (resp.ok) heatmapOrdersRaw = await resp.json();
+            } catch (e) {}
         }
 
         function renderHeatmap() {
-            const grid = document.getElementById('heatmapGrid');
-            const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
-            const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+            if (!heatmapOrdersRaw || heatmapOrdersRaw.length === 0) {
+                document.getElementById('heatmapMap').innerHTML = '<div style="text-align:center;color:#64748b;padding:2rem;">Nenhum pedido com dados de localidade</div>';
+                document.getElementById('heatmapRanking').innerHTML = '';
+                return;
+            }
 
-            allOrdersForHeatmap.forEach(o => {
-                if (!o.date) return;
-                const dt = new Date(o.date);
-                if (isNaN(dt)) return;
-                const dia = dt.getDay();
-                const hora = dt.getHours();
-                if (hora >= 0 && hora < 24) {
-                    matrix[dia][hora]++;
-                } else {
-                    for (let h = 8; h <= 18; h++) matrix[dia][h] += 1/11;
-                }
+            // Count orders by UF
+            const ufCount = {};
+            heatmapOrdersRaw.forEach(o => {
+                const uf = (o.transporte?.etiqueta?.uf || '').toUpperCase().trim();
+                if (uf && ufNames[uf]) ufCount[uf] = (ufCount[uf] || 0) + 1;
             });
 
-            let maxVal = 0;
-            matrix.forEach(row => row.forEach(v => { if (v > maxVal) maxVal = v; }));
+            const maxVal = Math.max(...Object.values(ufCount), 1);
 
-            let html = '<div class="heatmap-label"></div>';
-            for (let h = 0; h < 24; h++) {
-                html += `<div class="heatmap-hour-label">${String(h).padStart(2, '0')}</div>`;
-            }
-
-            for (let d = 0; d < 7; d++) {
-                html += `<div class="heatmap-label">${dias[d]}</div>`;
-                for (let h = 0; h < 24; h++) {
-                    const val = matrix[d][h];
-                    const idx = maxVal > 0 ? Math.round((val / maxVal) * (heatmapColors.length - 1)) : 0;
-                    const count = Math.round(val);
-                    html += `<div class="heatmap-cell" style="background:${heatmapColors[idx]}" title="${dias[d]} ${String(h).padStart(2,'0')}h: ${count} pedido(s)">${count || ''}</div>`;
+            // Build SVG
+            let svg = '<svg viewBox="60 100 470 420" xmlns="http://www.w3.org/2000/svg">';
+            for (const [uf, path] of Object.entries(brPaths)) {
+                const count = ufCount[uf] || 0;
+                const intensity = count > 0 ? Math.round((count / maxVal) * (heatmapColors.length - 1)) : 0;
+                const color = heatmapColors[intensity];
+                svg += `<path id="uf-${uf}" d="${path}" fill="${color}" data-uf="${uf}" data-count="${count}" onmouseenter="showUfTooltip(event)" onmouseleave="hideUfTooltip()" />`;
+                // Add state label
+                const match = path.match(/M\s*([\d.]+),([\d.]+)/);
+                if (match) {
+                    const coords = path.match(/[\d.]+/g).map(Number);
+                    let cx = 0, cy = 0, n = 0;
+                    for (let i = 0; i < coords.length; i += 2) { cx += coords[i]; cy += coords[i+1]; n++; }
+                    cx /= n; cy /= n;
+                    svg += `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="${count > 0 ? '#e2e8f0' : '#475569'}" font-size="8" font-weight="600" pointer-events="none">${uf}</text>`;
                 }
             }
-            grid.innerHTML = html;
+            svg += '</svg>';
+            document.getElementById('heatmapMap').innerHTML = svg;
 
-            const legend = document.getElementById('heatmapLegend');
-            legend.innerHTML = heatmapColors.map(c => `<span style="background:${c}"></span>`).join('');
+            // Build ranking
+            const sorted = Object.entries(ufCount).sort((a, b) => b[1] - a[1]);
+            const totalOrders = sorted.reduce((s, [, c]) => s + c, 0);
+            let ranking = '';
+            sorted.forEach(([uf, count], i) => {
+                const pct = (count / maxVal) * 100;
+                const idx = Math.round((count / maxVal) * (heatmapColors.length - 1));
+                ranking += `<li>
+                    <span class="heatmap-rank">${i + 1}.</span>
+                    <span class="heatmap-uf">${uf}</span>
+                    <div class="heatmap-bar-wrap"><div class="heatmap-bar" style="width:${pct}%;background:${heatmapColors[idx]}"></div></div>
+                    <span class="heatmap-count">${count}</span>
+                </li>`;
+            });
+            if (sorted.length === 0) ranking = '<li style="color:#64748b;justify-content:center;">Sem dados de UF</li>';
+            document.getElementById('heatmapRanking').innerHTML = ranking;
+
+            // Legend
+            document.getElementById('heatmapLegend').innerHTML = heatmapColors.map(c => `<span style="background:${c}"></span>`).join('');
+        }
+
+        function showUfTooltip(e) {
+            const el = e.target;
+            const uf = el.dataset.uf;
+            const count = el.dataset.count;
+            const tip = document.getElementById('heatmapTooltip');
+            tip.innerHTML = `<strong>${ufNames[uf] || uf}</strong><br>${count} pedido(s)`;
+            tip.style.display = 'block';
+            tip.style.left = (e.clientX + 12) + 'px';
+            tip.style.top = (e.clientY - 10) + 'px';
+        }
+        function hideUfTooltip() {
+            document.getElementById('heatmapTooltip').style.display = 'none';
         }
 
         loadAll();
