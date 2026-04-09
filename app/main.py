@@ -237,7 +237,7 @@ async def bling_orders_heatmap(
     if not bling.access_token:
         raise HTTPException(status_code=401, detail="Bling nao autorizado.")
     try:
-        return await bling.get_orders_uf_count(date_from, date_to)
+        return await bling.get_orders_location_count(date_from, date_to)
     finally:
         await bling.close()
 

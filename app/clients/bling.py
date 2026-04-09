@@ -263,12 +263,11 @@ class BlingClient:
             page += 1
         return orders
 
-    async def get_orders_uf_count(
+    async def get_orders_location_count(
         self, date_from: str, date_to: str
-    ) -> dict[str, int]:
-        """Count orders by UF (state) using contact addresses."""
+    ) -> dict:
+        """Count orders by UF and city using contact addresses."""
         orders = await self.get_orders_raw(date_from, date_to)
-        # Collect unique contact IDs
         contato_ids = set()
         order_contatos = []
         for o in orders:
@@ -278,35 +277,44 @@ class BlingClient:
                 order_contatos.append(cid)
 
         # Fetch contacts in parallel (batches of 10)
-        contato_ufs = {}
+        contato_locations: dict[int, dict] = {}
         id_list = list(contato_ids)
         for i in range(0, len(id_list), 10):
             batch = id_list[i:i+10]
             results = await asyncio.gather(
-                *[self._safe_get_contato_uf(cid) for cid in batch]
+                *[self._safe_get_contato_location(cid) for cid in batch]
             )
-            for cid, uf in zip(batch, results):
-                if uf:
-                    contato_ufs[cid] = uf
+            for cid, loc in zip(batch, results):
+                if loc.get("uf"):
+                    contato_locations[cid] = loc
 
-        # Count by UF
         uf_count: dict[str, int] = {}
+        city_count: dict[str, int] = {}
         for cid in order_contatos:
-            uf = contato_ufs.get(cid, "")
-            if uf:
-                uf_count[uf] = uf_count.get(uf, 0) + 1
+            loc = contato_locations.get(cid)
+            if not loc:
+                continue
+            uf = loc["uf"]
+            cidade = loc.get("municipio", "")
+            uf_count[uf] = uf_count.get(uf, 0) + 1
+            if cidade:
+                key = f"{cidade}/{uf}"
+                city_count[key] = city_count.get(key, 0) + 1
 
-        return uf_count
+        return {"by_uf": uf_count, "by_city": city_count}
 
-    async def _safe_get_contato_uf(self, contato_id: int) -> str:
-        """Get UF from a contact, returning empty string on error."""
+    async def _safe_get_contato_location(self, contato_id: int) -> dict:
+        """Get UF and city from a contact."""
         try:
             data = await self._request("GET", f"/contatos/{contato_id}")
             contato = data.get("data", {})
             endereco = contato.get("endereco", {}).get("geral", {})
-            return (endereco.get("uf", "") or "").upper().strip()
+            return {
+                "uf": (endereco.get("uf", "") or "").upper().strip(),
+                "municipio": (endereco.get("municipio", "") or "").strip(),
+            }
         except Exception:
-            return ""
+            return {}
 
     async def get_order_detail(self, order_id: int) -> dict:
         """Fetch full order detail by Bling internal ID."""
