@@ -223,6 +223,25 @@ async def bling_orders_api(
         await bling.close()
 
 
+@app.get("/api/bling/orders/heatmap")
+async def bling_orders_heatmap(
+    date_from: str = Query(None),
+    date_to: str = Query(None),
+    _auth: str = Depends(verify_credentials),
+):
+    d_from, d_to = default_dates()
+    date_from = validate_date(date_from or d_from)
+    date_to = validate_date(date_to or d_to)
+
+    bling = BlingClient()
+    if not bling.access_token:
+        raise HTTPException(status_code=401, detail="Bling nao autorizado.")
+    try:
+        return await bling.get_orders_uf_count(date_from, date_to)
+    finally:
+        await bling.close()
+
+
 @app.get("/api/bling/canais-venda")
 async def bling_canais_venda(_auth: str = Depends(verify_credentials)):
     bling = BlingClient()

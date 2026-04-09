@@ -263,6 +263,51 @@ class BlingClient:
             page += 1
         return orders
 
+    async def get_orders_uf_count(
+        self, date_from: str, date_to: str
+    ) -> dict[str, int]:
+        """Count orders by UF (state) using contact addresses."""
+        orders = await self.get_orders_raw(date_from, date_to)
+        # Collect unique contact IDs
+        contato_ids = set()
+        order_contatos = []
+        for o in orders:
+            cid = o.get("contato", {}).get("id", 0)
+            if cid:
+                contato_ids.add(cid)
+                order_contatos.append(cid)
+
+        # Fetch contacts in parallel (batches of 10)
+        contato_ufs = {}
+        id_list = list(contato_ids)
+        for i in range(0, len(id_list), 10):
+            batch = id_list[i:i+10]
+            results = await asyncio.gather(
+                *[self._safe_get_contato_uf(cid) for cid in batch]
+            )
+            for cid, uf in zip(batch, results):
+                if uf:
+                    contato_ufs[cid] = uf
+
+        # Count by UF
+        uf_count: dict[str, int] = {}
+        for cid in order_contatos:
+            uf = contato_ufs.get(cid, "")
+            if uf:
+                uf_count[uf] = uf_count.get(uf, 0) + 1
+
+        return uf_count
+
+    async def _safe_get_contato_uf(self, contato_id: int) -> str:
+        """Get UF from a contact, returning empty string on error."""
+        try:
+            data = await self._request("GET", f"/contatos/{contato_id}")
+            contato = data.get("data", {})
+            endereco = contato.get("endereco", {}).get("geral", {})
+            return (endereco.get("uf", "") or "").upper().strip()
+        except Exception:
+            return ""
+
     async def get_order_detail(self, order_id: int) -> dict:
         """Fetch full order detail by Bling internal ID."""
         data = await self._request("GET", f"/pedidos/vendas/{order_id}")
