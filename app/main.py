@@ -58,15 +58,18 @@ security = HTTPBasic()
 
 def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
     settings = get_settings()
-    correct_user = secrets.compare_digest(credentials.username, settings.dash_username)
-    correct_pass = secrets.compare_digest(credentials.password, settings.dash_password)
-    if not (correct_user and correct_pass):
-        raise HTTPException(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail="Credenciais invalidas",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return credentials.username
+    for pair in settings.dash_users.split(","):
+        pair = pair.strip()
+        if ":" not in pair:
+            continue
+        user, passwd = pair.split(":", 1)
+        if secrets.compare_digest(credentials.username, user) and secrets.compare_digest(credentials.password, passwd):
+            return credentials.username
+    raise HTTPException(
+        status_code=HTTP_401_UNAUTHORIZED,
+        detail="Credenciais invalidas",
+        headers={"WWW-Authenticate": "Basic"},
+    )
 
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -127,7 +130,7 @@ async def bling_callback(
     try:
         await bling.exchange_code(code)
         return RedirectResponse(f"{BASE_PATH}/bling")
-    except Exception as e:
+    except Exception:
         return {"status": "error", "detail": "Erro ao trocar code por token."}
 
 
@@ -391,7 +394,7 @@ async def bling_empresa(_auth: str = Depends(verify_credentials)):
         raise HTTPException(status_code=401, detail="Bling nao autorizado.")
     try:
         return await bling.get_empresa()
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail="Erro ao processar requisicao.")
     finally:
         await bling.close()
@@ -416,7 +419,7 @@ async def bling_contas_receber(order_id: int, _auth: str = Depends(verify_creden
         raise HTTPException(status_code=401, detail="Bling nao autorizado.")
     try:
         return await bling.get_contas_receber_by_origin(order_id)
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail="Erro ao processar requisicao.")
     finally:
         await bling.close()
@@ -456,7 +459,7 @@ async def bling_generate_nfe(order_id: int, _auth: str = Depends(verify_credenti
         raise HTTPException(status_code=401, detail="Bling nao autorizado.")
     try:
         return await bling.generate_nfe(order_id)
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail="Erro ao processar requisicao.")
     finally:
         await bling.close()
@@ -470,7 +473,7 @@ async def bling_retry_nfe(nfe_id: int, order_id: int = Query(...), _auth: str = 
         raise HTTPException(status_code=401, detail="Bling nao autorizado.")
     try:
         return await bling.retry_nfe(nfe_id, order_id)
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail="Erro ao processar requisicao.")
     finally:
         await bling.close()
@@ -483,7 +486,7 @@ async def bling_cancel_nfe(nfe_id: int, _auth: str = Depends(verify_credentials)
         raise HTTPException(status_code=401, detail="Bling nao autorizado.")
     try:
         return await bling.cancel_nfe(nfe_id)
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail="Erro ao processar requisicao.")
     finally:
         await bling.close()

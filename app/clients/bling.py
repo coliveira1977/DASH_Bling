@@ -1,7 +1,6 @@
 import httpx
 import asyncio
 import json
-import os
 import stat
 import secrets
 from base64 import b64encode, b64decode
@@ -509,7 +508,7 @@ class BlingClient:
                 msgs = [f.get("msg", "") for f in fields if f.get("msg")]
                 detail = "; ".join(msgs) if msgs else error_info.get("message", response.text)
                 raise ValueError(f"Bling: {detail}")
-            except (ValueError,) as e:
+            except (ValueError,):
                 raise
             except Exception:
                 raise ValueError(f"Bling retornou erro {response.status_code}: {response.text}")
