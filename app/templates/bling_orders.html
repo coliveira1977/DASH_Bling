@@ -154,6 +154,54 @@
             background: #7f1d1d33; border: 1px solid #7f1d1d; color: #fca5a5;
             padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.85rem;
         }
+        .btn-heatmap {
+            background: transparent; color: #B5C47E; border: 1px solid #334155;
+            padding: 0.4rem 0.85rem; border-radius: 0.375rem;
+            cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s;
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+        .btn-heatmap:hover { border-color: #B5C47E; background: #2d3a1f; }
+        .btn-heatmap:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-heatmap svg { width: 14px; height: 14px; }
+        .heatmap-container {
+            background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem;
+            padding: 1.25rem; margin-bottom: 1.5rem; display: none;
+        }
+        .heatmap-container.active { display: block; }
+        .heatmap-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+        }
+        .heatmap-header h3 { font-size: 0.9rem; color: #cbd5e1; }
+        .heatmap-close {
+            background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer;
+        }
+        .heatmap-close:hover { color: #e2e8f0; }
+        .heatmap-grid {
+            display: grid; gap: 2px;
+            grid-template-columns: 60px repeat(24, 1fr);
+        }
+        .heatmap-cell {
+            aspect-ratio: 1; border-radius: 3px; position: relative;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.6rem; color: transparent; transition: all 0.15s;
+        }
+        .heatmap-cell:hover { color: #e2e8f0; transform: scale(1.15); z-index: 1; }
+        .heatmap-label {
+            display: flex; align-items: center; font-size: 0.65rem; color: #94a3b8;
+            padding-right: 0.5rem; justify-content: flex-end;
+        }
+        .heatmap-hour-label {
+            display: flex; align-items: flex-end; justify-content: center;
+            font-size: 0.6rem; color: #64748b; padding-bottom: 0.25rem;
+        }
+        .heatmap-legend {
+            display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem;
+            justify-content: flex-end; font-size: 0.65rem; color: #64748b;
+        }
+        .heatmap-legend-bar {
+            display: flex; gap: 1px; border-radius: 3px; overflow: hidden;
+        }
+        .heatmap-legend-bar span { width: 16px; height: 10px; }
         .breadcrumb { font-size: 0.8rem; color: #64748b; margin-bottom: 1rem; }
         .breadcrumb a { color: #B5C47E; text-decoration: none; }
         .breadcrumb a:hover { text-decoration: underline; }
@@ -197,6 +245,26 @@
             <div class="filter-group">
                 <label>Buscar:</label>
                 <input type="text" id="searchInput" placeholder="Pedido, cliente..." oninput="filterTable()">
+            </div>
+            <button class="btn-heatmap" id="heatmapBtn" onclick="toggleHeatmap()" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+                Mapa de Calor
+            </button>
+        </div>
+
+        <div class="heatmap-container" id="heatmapContainer">
+            <div class="heatmap-header">
+                <h3>Mapa de Calor - Pedidos por Dia e Hora</h3>
+                <button class="heatmap-close" onclick="toggleHeatmap()">&times;</button>
+            </div>
+            <div class="heatmap-grid" id="heatmapGrid"></div>
+            <div class="heatmap-legend">
+                <span>Menos</span>
+                <div class="heatmap-legend-bar" id="heatmapLegend"></div>
+                <span>Mais</span>
             </div>
         </div>
 
@@ -375,6 +443,8 @@
                 allOrders = await resp.json();
                 renderCards();
                 applyFilterAndSort();
+                document.getElementById('heatmapBtn').disabled = false;
+                if (document.getElementById('heatmapContainer').classList.contains('active')) renderHeatmap();
                 document.getElementById('lastUpdate').textContent =
                     `Atualizado: ${new Date().toLocaleString('pt-BR')}`;
             } catch (err) {
@@ -500,6 +570,55 @@
 
         function filterTable() {
             applyFilterAndSort();
+        }
+
+        const heatmapColors = ['#1e293b', '#1a2e1a', '#2d4a1f', '#3d6b1f', '#4d8c1f', '#6BAF1F', '#93A25C', '#B5C47E'];
+
+        function toggleHeatmap() {
+            const container = document.getElementById('heatmapContainer');
+            const isActive = container.classList.toggle('active');
+            if (isActive) renderHeatmap();
+        }
+
+        function renderHeatmap() {
+            const grid = document.getElementById('heatmapGrid');
+            const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+            const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+
+            allOrders.forEach(o => {
+                if (!o.data || o.data === '0000-00-00') return;
+                const dt = new Date(o.data + 'T12:00:00');
+                const dia = dt.getDay();
+                const hora = o.hora ? parseInt(o.hora.split(':')[0]) : null;
+                if (hora !== null && hora >= 0 && hora < 24) {
+                    matrix[dia][hora]++;
+                } else {
+                    // distribute across business hours if no hour info
+                    for (let h = 8; h <= 18; h++) matrix[dia][h] += 1/11;
+                }
+            });
+
+            let maxVal = 0;
+            matrix.forEach(row => row.forEach(v => { if (v > maxVal) maxVal = v; }));
+
+            let html = '<div class="heatmap-label"></div>';
+            for (let h = 0; h < 24; h++) {
+                html += `<div class="heatmap-hour-label">${String(h).padStart(2, '0')}</div>`;
+            }
+
+            for (let d = 0; d < 7; d++) {
+                html += `<div class="heatmap-label">${dias[d]}</div>`;
+                for (let h = 0; h < 24; h++) {
+                    const val = matrix[d][h];
+                    const idx = maxVal > 0 ? Math.round((val / maxVal) * (heatmapColors.length - 1)) : 0;
+                    const count = Math.round(val);
+                    html += `<div class="heatmap-cell" style="background:${heatmapColors[idx]}" title="${dias[d]} ${String(h).padStart(2,'0')}h: ${count} pedido(s)">${count || ''}</div>`;
+                }
+            }
+            grid.innerHTML = html;
+
+            const legend = document.getElementById('heatmapLegend');
+            legend.innerHTML = heatmapColors.map(c => `<span style="background:${c}"></span>`).join('');
         }
 
         loadOrders();
