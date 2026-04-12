@@ -6,7 +6,8 @@
       "Bash(curl -s \"http://localhost:8000/bling/pedidos/25470429677\")",
       "Bash(curl -s -X POST \"http://localhost:8000/api/bling/orders/25470429677/nfe\" -H \"Content-Type: application/json\")",
       "Bash(curl -s -X POST \"http://localhost:8000/api/bling/orders/25470429677/nfe\")",
-      "Bash(curl -s \"http://localhost:8000/api/bling/summary\")"
+      "Bash(curl -s \"http://localhost:8000/api/bling/summary\")",
+      "Bash(git commit -m ':*)"
     ]
   }
 }

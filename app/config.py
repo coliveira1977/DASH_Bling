@@ -17,9 +17,8 @@ class Settings(BaseSettings):
     ml_refresh_token: str = ""
     ml_seller_id: str = ""
 
-    # Dashboard Authentication
-    dash_username: str = "admin"
-    dash_password: str = "admin"
+    # Dashboard Authentication (comma-separated for multiple users)
+    dash_users: str = "admin:admin"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
